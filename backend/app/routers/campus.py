@@ -404,7 +404,7 @@ def list_users(request: Request, user=Depends(administrator)):
 @router.post("/users", status_code=201)
 def create_user(payload: UserInput, request: Request, user=Depends(administrator)):
     data = payload.model_dump()
-    row = {"_id": str(uuid4()), **data, "auth_provider": "cloudflare",
+    row = {"_id": str(uuid4()), **data, "auth_provider": "supabase",
            "created_at": utcnow(), "updated_at": utcnow()}
     try:
         request.app.state.db.users.insert_one(row)

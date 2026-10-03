@@ -139,12 +139,12 @@ async def websocket_events(socket: WebSocket):
     if origin and origin not in socket.app.state.settings.cors_origins:
         await socket.close(code=1008)
         return
-    assertion = socket.headers.get("cf-access-jwt-assertion")
-    if not assertion:
+    token = socket.cookies.get("gatelog_session")
+    if not token:
         await socket.close(code=1008)
         return
     try:
-        user = await run_in_threadpool(socket.app.state.auth.cloudflare_login, assertion)
+        user, _session = await run_in_threadpool(socket.app.state.auth.authenticate, token)
         if user["role"] == "department_staff":
             await socket.close(code=1008)
             return

@@ -2,7 +2,7 @@
 
 ANPR-based campus vehicle movement and trip-purpose logging, built with FastAPI, MongoDB/PyMongo, React, Vite and Tailwind CSS.
 
-GateLog is an ANPR-based campus gate operations system built with FastAPI, MongoDB/PyMongo, React, Vite and Tailwind CSS. It supports Cloudflare Access sign-in, vehicle entry and exit, visitor and bus workflows, human review of uncertain plates, audit records, analytics and CSV exports. The registry-driven simulator uses a vehicle entered through the website; persistent use requires MongoDB, and real ANPR requires separately supplied model weights and OCR software.
+GateLog is an ANPR-based campus gate operations system built with FastAPI, MongoDB/PyMongo, React, Vite and Tailwind CSS. It supports Google sign-in through Supabase Auth, vehicle entry and exit, visitor and bus workflows, human review of uncertain plates, audit records, analytics and CSV exports. The registry-driven simulator uses a vehicle entered through the website; persistent use requires MongoDB, and real ANPR requires separately supplied model weights and OCR software.
 
 ## Start on Windows
 
@@ -16,7 +16,7 @@ cd D:\GateLog
 .\scripts\run_backend.bat
 ```
 
-Setup creates a private `.env` when needed and generates a local JWT secret. Existing `.env` values are preserved. Sign-in is handled by Cloudflare Access with Google; configure the Access settings described below before hosting GateLog. Open a second terminal:
+Setup creates a private `.env` when needed and generates a local JWT secret. Existing `.env` values are preserved. Configure Supabase Auth with Google and set the Supabase variables described below before hosting GateLog. Open a second terminal:
 
 ```powershell
 cd D:\GateLog
@@ -43,13 +43,13 @@ Use the virtual environment's Python directly; activation is optional. Avoid ove
 
 ## macOS setup
 
-Install Python 3.10+ and Node.js 22+, then run `bash scripts/setup.sh`. Start the backend and frontend in separate terminals with `bash scripts/start-backend.sh` and `bash scripts/start-frontend.sh`. Configure Cloudflare Access and Google before signing in. `bash scripts/seed-demo.sh` loads optional sample records into persistent MongoDB. `bash scripts/test.sh` runs the backend suite and frontend production build. These scripts use paths relative to the repository.
+Install Python 3.10+ and Node.js 22+, then run `bash scripts/setup.sh`. Start the backend and frontend in separate terminals with `bash scripts/start-backend.sh` and `bash scripts/start-frontend.sh`. Configure Supabase Auth and Google before signing in. `bash scripts/seed-demo.sh` loads optional sample records into persistent MongoDB. `bash scripts/test.sh` runs the backend suite and frontend production build. These scripts use paths relative to the repository.
 
 ## Authentication and roles
 
-The sign-up screen uses Cloudflare Access for Google sign-in. GateLog validates Cloudflare's signed identity assertion, creates the user record on first sign-in, and stores no Google or GateLog password. Add campus users to the Cloudflare Access policy. Set `CLOUDFLARE_ACCESS_TEAM_DOMAIN`, `CLOUDFLARE_ACCESS_AUDIENCE`, and `CLOUDFLARE_ADMIN_EMAILS` in the backend environment; the listed administrator email receives the admin role, while other allowed accounts receive the security role. Create the first administrator by adding their Google email to `CLOUDFLARE_ADMIN_EMAILS` before their first sign-in. Keep the API behind the same Cloudflare Access protected hostname and a Cloudflare Tunnel; do not expose the origin directly.
+The sign-up screen uses Google through Supabase Auth. GateLog verifies the Supabase access token on the server, creates the GateLog account on first sign-in, and stores no Google password. The backend then issues a short-lived, HttpOnly session cookie and enforces CSRF checks for writes. Supabase's browser session is cleared after exchange. Add only approved campus users to `SUPABASE_ALLOWED_EMAILS` (comma-separated) or approved email domains to `SUPABASE_ALLOWED_DOMAINS`; use `SUPABASE_ADMIN_EMAILS` for the first administrator. Other allowed users receive the security role. Admin email addresses are automatically allowed.
 
-For Cloudflare setup, add Google under **Cloudflare One → Integrations → Identity providers**, then create a **Self-hosted** Access application for the GateLog hostname and allow only campus emails or groups. Route the frontend and API through that same protected hostname so the browser's Access session reaches FastAPI. Copy the Access application's AUD tag and your team domain into the backend environment. Set `CLOUDFLARE_ADMIN_EMAILS` to the first administrator's Google email. For deployment, set `VITE_API_URL` to the protected GateLog origin and add that origin to `CORS_ORIGINS`.
+In Supabase, enable Google under **Authentication → Sign In / Providers → Google** and enter the Google OAuth client ID and secret. Add the Supabase callback URL shown on that provider page to Google's authorized redirect URIs. In Supabase **URL Configuration**, set the Site URL to `https://cbvm.vercel.app` and add it to the redirect allow list. Set backend environment variables `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_ALLOWED_EMAILS` (or `SUPABASE_ALLOWED_DOMAINS`), and `SUPABASE_ADMIN_EMAILS`. Set frontend build variables `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` to the matching project URL and public anon/publishable key. Keep `JWT_SECRET_KEY` private and set `COOKIE_SECURE=true` in production. Vercel environment changes apply to the next deployment. The frontend API remains same-origin at `/api`.
 
 Vehicle registry, plate readings, movement history, review decisions and audit records belong in MongoDB Atlas (`DATABASE_MODE=mongodb`). Original uploaded ANPR images can be stored in a private Cloudflare R2 bucket. Create a bucket-scoped R2 API token and set `R2_ENDPOINT_URL`, `R2_BUCKET`, `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY`. GateLog stores only the private object key beside the detection record; an operator can request a short-lived signed read URL from `/anpr/scans/{object_key}`. The upload is skipped when R2 is not configured. Add an R2 lifecycle rule for the `scans/` prefix matching your retention policy (90 days by default).
 
@@ -153,9 +153,11 @@ All backend variables are read from the repository-root .env regardless of worki
 | JWT_SECRET_KEY | Generated by setup; required for persistent operation |
 | JWT_ACCESS_TOKEN_EXPIRE_MINUTES | 60 minute session lifetime |
 | COOKIE_SECURE | false for loopback development; true behind HTTPS |
-| CLOUDFLARE_ACCESS_TEAM_DOMAIN | Cloudflare Access team host, such as `campus.cloudflareaccess.com` |
-| CLOUDFLARE_ACCESS_AUDIENCE | Access application AUD tag used to validate identity assertions |
-| CLOUDFLARE_ADMIN_EMAILS | Comma-separated Google emails that receive the admin role |
+| SUPABASE_URL / SUPABASE_ANON_KEY | Supabase project URL and public anon/publishable key; backend verifies Google sessions with them |
+| SUPABASE_ALLOWED_EMAILS | Comma-separated Google accounts allowed to sign in |
+| SUPABASE_ALLOWED_DOMAINS | Optional comma-separated email domains allowed to sign in |
+| SUPABASE_ADMIN_EMAILS | Comma-separated allowed accounts that receive the admin role |
+| VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY | Matching Supabase project URL and public key used by the browser |
 | R2_ENDPOINT_URL / R2_BUCKET | R2 S3 endpoint and private bucket name |
 | R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY | Bucket-scoped R2 S3 credentials; backend only |
 | R2_PRESIGNED_URL_EXPIRY_SECONDS | Signed scan image link lifetime; 300 seconds by default |
@@ -219,7 +221,8 @@ For continuous video set RUN_VIDEO_WORKER=true, choose VIDEO_SOURCE, configure t
 | POST | /reviews/{id}/resolve | Confirm/correct or reject a reading with audit record |
 | POST | /reviews/{id}/dismiss | Dismiss without recording a movement |
 | GET | /auth/config /auth/me | Auth setup status / signed-in Google identity |
-| POST | /auth/logout | Sign out of GateLog and Cloudflare Access |
+| POST | /auth/google | Exchange a verified Supabase Google session for a GateLog session |
+| POST | /auth/logout | Sign out of GateLog |
 | GET | /auth/me | Current user and CSRF token |
 | GET | /health | Database health and persistence mode |
 | WS | /ws/events | Live notifications and heartbeat |

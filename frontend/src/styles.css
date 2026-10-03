@@ -911,7 +911,8 @@ footer {
 .signup-points { display: grid; gap: 12px; }
 .signup-points div { display: flex; align-items: center; gap: 10px; color: #536b75; font-size: 13px; }
 .signup-points svg { color: #118087; flex: none; }
-.google-signup { display: flex; align-items: center; justify-content: center; gap: 12px; min-height: 52px; padding: 0 16px; color: #fff; background: #173948; font-size: 14px; font-weight: 650; transition: background .15s, transform .15s; }
+.google-signup { width: 100%; border: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 12px; min-height: 52px; padding: 0 16px; color: #fff; background: #173948; font-size: 14px; font-weight: 650; transition: background .15s, transform .15s; }
+.google-signup:disabled { cursor: wait; opacity: .75; }
 .google-signup:hover { background: #205263; transform: translateY(-1px); }
 .google-signup > svg { margin-left: auto; color: #f5bd68; }
 .google-g { width: 25px; height: 25px; display: grid; place-items: center; border-radius: 50%; color: #4285f4; background: white; font-size: 16px; font-weight: 750; }

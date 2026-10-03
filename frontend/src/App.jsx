@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Plus,
   Search,
@@ -11,6 +11,7 @@ import {
 import { api, setCsrfToken } from "./services/api";
 import { useApi } from "./hooks/useApi";
 import { useLiveEvents } from "./hooks/useLiveEvents";
+import { supabase } from "./services/supabase";
 import Shell, { pages } from "./layouts/Shell";
 import Dashboard, { ActivityTable } from "./pages/Dashboard";
 import {
@@ -50,11 +51,13 @@ export default function App() {
   const [plateSearch, setPlateSearch] = useState("");
   const [pending, setPending] = useState(false);
   const [user, setUser] = useState(undefined);
+  const [authError, setAuthError] = useState("");
+  const sessionRestore = useRef(null);
   const [reviewItem, setReviewItem] = useState(null);
   const [visitorReviewId, setVisitorReviewId] = useState(null);
   const [visitorReviewPlate, setVisitorReviewPlate] = useState("");
   const refresh = useCallback(() => setRevision((value) => value + 1), []);
-  const liveStatus = useLiveEvents(refresh);
+  const liveStatus = useLiveEvents(refresh, Boolean(user));
   const dashboard = useApi("/dashboard", revision);
   const path =
     page === "registry"
@@ -77,11 +80,34 @@ export default function App() {
   );
   useEffect(() => {
     let active = true;
-    api("/auth/me").then(session => {
+    if (!sessionRestore.current) {
+      sessionRestore.current = (async () => {
+        try {
+          const session = await api("/auth/me");
+          return { user: session.user, csrf: session.csrf_token };
+        } catch { /* A first visit has no GateLog session yet. */ }
+        const { data, error } = await supabase?.auth.getSession() || {};
+        if (error) throw error;
+        const accessToken = data?.session?.access_token;
+        if (!accessToken) return { user: null };
+        const result = await api("/auth/google", {
+          method: "POST",
+          body: { access_token: accessToken },
+        });
+        await supabase.auth.signOut();
+        return { user: result.user, csrf: result.csrf_token };
+      })().catch(async (error) => {
+        await supabase?.auth.signOut();
+        return { user: null, error: error.message || "Google sign-in could not be completed." };
+      });
+    }
+    sessionRestore.current.then((result) => {
       if (!active) return;
-      setCsrfToken(session.csrf_token);
-      setUser(session.user);
-    }).catch(() => { if (active) setUser(null); });
+      if (result.csrf) setCsrfToken(result.csrf);
+      if (result.error) setAuthError(result.error);
+      setUser(result.user);
+      if (result.user) refresh();
+    });
     return () => { active = false; };
   }, []);
   useEffect(() => {
@@ -105,11 +131,7 @@ export default function App() {
   }
   async function logout() {
     try {
-      const result = await api("/auth/logout", { method: "POST" });
-      if (result.cloudflare) {
-        location.assign("/cdn-cgi/access/logout");
-        return;
-      }
+      await api("/auth/logout", { method: "POST" });
     } catch { /* Access session may already have expired */ }
     setCsrfToken("");
     setUser(null);
@@ -234,7 +256,7 @@ export default function App() {
     audit: ["Audit log", "Review administrative and manual changes."],
   };
   if (user === undefined) return <main className="login-page"><p>Checking session…</p></main>;
-  if (!user) return <Login />;
+  if (!user) return <Login authError={authError} />;
   return (
     <>
       <a href="#main-content" className="skip-link">

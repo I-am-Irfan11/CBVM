@@ -25,16 +25,20 @@ class Settings(BaseSettings):
     frame_sample_rate: float = Field(default=2, gt=0, le=60)
     run_video_worker: bool = False
     camera_id: str = "main-gate-in"
-    cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    cors_origins: list[str] = [
+        "http://localhost:5173", "http://127.0.0.1:5173", "https://cbvm.vercel.app",
+    ]
     campus_timezone: str = "Asia/Kolkata"
     retention_days: int = Field(default=90, ge=1)
     jwt_secret_key: str | None = Field(default=None, min_length=32)
     jwt_access_token_expire_minutes: int = Field(default=60, ge=1, le=1440)
     cookie_secure: bool = False
     seed_operational_data: bool = False
-    cloudflare_access_team_domain: str = ""
-    cloudflare_access_audience: str = ""
-    cloudflare_admin_emails: str = ""
+    supabase_url: str = ""
+    supabase_anon_key: str = ""
+    supabase_allowed_emails: str = ""
+    supabase_allowed_domains: str = ""
+    supabase_admin_emails: str = ""
     r2_endpoint_url: str = ""
     r2_bucket: str = ""
     r2_access_key_id: str = ""

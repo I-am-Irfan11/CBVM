@@ -1,3 +1,5 @@
+import secrets
+
 from fastapi import Depends, HTTPException, Request
 from starlette.concurrency import run_in_threadpool
 
@@ -5,17 +7,24 @@ from app.core.identity import actor
 
 
 async def current_user(request: Request):
-    assertion = request.headers.get("cf-access-jwt-assertion")
-    if assertion:
-        origin = request.headers.get("origin")
-        if request.method not in ("GET", "HEAD", "OPTIONS") and origin and origin not in request.app.state.settings.cors_origins:
+    settings = request.app.state.settings
+    origin = request.headers.get("origin")
+    if request.method not in ("GET", "HEAD", "OPTIONS"):
+        if origin and origin not in settings.cors_origins:
             raise HTTPException(403, "Origin is not allowed")
-        user = await run_in_threadpool(request.app.state.auth.cloudflare_login, assertion)
-        request.state.user, request.state.session = user, None
-        actor.set({"user_id": user["_id"], "role": user["role"]})
-        return user
-    raise HTTPException(401, "Sign in with your Google account through Cloudflare Access.",
-                        headers={"WWW-Authenticate": "Bearer"})
+
+    token = request.cookies.get("gatelog_session")
+    if not token:
+        raise HTTPException(401, "Sign in with Google to continue.", headers={"WWW-Authenticate": "Bearer"})
+
+    user, session = await run_in_threadpool(request.app.state.auth.authenticate, token)
+    if request.method not in ("GET", "HEAD", "OPTIONS"):
+        csrf = request.headers.get("x-csrf-token", "")
+        if not csrf or not secrets.compare_digest(csrf, session.get("csrf", "")):
+            raise HTTPException(403, "Session verification failed. Refresh the page and try again.")
+    request.state.user, request.state.session = user, session
+    actor.set({"user_id": user["_id"], "role": user["role"]})
+    return user
 
 
 def roles(*allowed):

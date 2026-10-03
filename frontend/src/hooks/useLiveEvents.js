@@ -1,9 +1,13 @@
 import { useEffect, useState } from "react";
 import { websocketURL } from "../services/api";
 
-export function useLiveEvents(refresh) {
+export function useLiveEvents(refresh, enabled = true) {
   const [status, setStatus] = useState("connecting");
   useEffect(() => {
+    if (!enabled) {
+      setStatus("idle");
+      return undefined;
+    }
     let stopped = false,
       socket,
       reconnect,
@@ -46,6 +50,6 @@ export function useLiveEvents(refresh) {
       clearTimeout(refreshTimer);
       socket.close();
     };
-  }, [refresh]);
+  }, [refresh, enabled]);
   return status;
 }
