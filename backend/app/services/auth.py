@@ -1,5 +1,6 @@
 import hashlib
 import json
+import logging
 import secrets
 import urllib.error
 import urllib.request
@@ -9,6 +10,8 @@ from uuid import uuid4
 import jwt
 from fastapi import HTTPException
 from pymongo.errors import DuplicateKeyError
+
+logger = logging.getLogger(__name__)
 
 SAFE_USER_FIELDS = (
     "_id", "email", "username", "full_name", "role", "department", "active",
@@ -51,7 +54,14 @@ class AuthService:
             if error.code in (400, 401, 403):
                 raise HTTPException(401, "Google sign-in expired. Please try again.") from None
             raise HTTPException(503, "Could not verify Google sign-in. Please retry.") from None
-        except Exception:
+        except Exception as error:
+            # Keep credentials out of logs; the exception message helps diagnose
+            # malformed URLs, DNS failures, TLS problems, and timeouts.
+            logger.warning(
+                "Supabase user verification connection failed (%s): %s",
+                type(error).__name__,
+                error,
+            )
             raise HTTPException(503, "Could not reach the sign-in service. Please retry.") from None
 
         email = (identity.get("email") or "").strip().lower()
