@@ -28,6 +28,20 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
     campus_timezone: str = "Asia/Kolkata"
     retention_days: int = Field(default=90, ge=1)
+    jwt_secret_key: str | None = Field(default=None, min_length=32)
+    jwt_access_token_expire_minutes: int = Field(default=60, ge=1, le=1440)
+    cookie_secure: bool = False
+    seed_operational_data: bool = False
+    cloudflare_access_team_domain: str = ""
+    cloudflare_access_audience: str = ""
+    cloudflare_admin_emails: str = ""
+    r2_endpoint_url: str = ""
+    r2_bucket: str = ""
+    r2_access_key_id: str = ""
+    r2_secret_access_key: str = ""
+    r2_presigned_url_expiry_seconds: int = Field(default=300, ge=30, le=3600)
+    enable_demo_reset: bool = False
+    reconnect_delay_seconds: float = Field(default=1, gt=0, le=60)
 
     @field_validator("campus_timezone")
     @classmethod

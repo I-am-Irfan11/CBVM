@@ -6,6 +6,9 @@ test("registry, entry, exit, history, review, and live dashboard", async ({
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
+  await page.getByLabel("Username or email").fill("admin");
+  await page.getByLabel("Password").fill("TestOnly-password-123!");
+  await page.getByRole("button", { name: "Sign in" }).click();
   await expect(
     page.getByRole("heading", { name: "Campus at a glance." }),
   ).toBeVisible();
@@ -55,7 +58,7 @@ test("registry, entry, exit, history, review, and live dashboard", async ({
   await expect(
     page.getByRole("row").filter({ hasText: "TN O9 AB I234" }),
   ).toContainText("43%");
-  await page.getByRole("button", { name: "Dismiss review" }).first().click();
+  await page.getByRole("button", { name: "Reject" }).first().click();
   await expect(page.getByRole("status")).toContainText("Review dismissed");
   expect(errors).toEqual([]);
 });
@@ -63,6 +66,9 @@ test("registry, entry, exit, history, review, and live dashboard", async ({
 test("dashboard fits a mobile viewport", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
+  await page.getByLabel("Username or email").fill("admin");
+  await page.getByLabel("Password").fill("TestOnly-password-123!");
+  await page.getByRole("button", { name: "Sign in" }).click();
   await expect(
     page.getByRole("heading", { name: "Campus at a glance." }),
   ).toBeVisible();

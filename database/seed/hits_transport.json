@@ -1,0 +1,31 @@
+{
+  "source_url": "https://hindustanuniv.ac.in/facilities/transport/",
+  "fetched_at": "2026-10-03T09:58:51Z",
+  "source_timetable_label": "Bus Route Timings 2023-2024",
+  "reference_only": true,
+  "routes": [
+    {"route_number":"01","route_name":"Avadi","bus_name":"Meghna","boarding_points":[],"endpoint":null},
+    {"route_number":"02","route_name":"Periyar Nagar","bus_name":"Chittar","boarding_points":[],"endpoint":null},
+    {"route_number":"03","route_name":"Purasawakkam","bus_name":"Hemavathy","boarding_points":[],"endpoint":null},
+    {"route_number":"04","route_name":"Poonamallee","bus_name":"Thames","boarding_points":[],"endpoint":null},
+    {"route_number":"05","route_name":"Tiruvottriyur","bus_name":"Gomti","boarding_points":[],"endpoint":null},
+    {"route_number":"06","route_name":"Thiruvallur","bus_name":"Danube","boarding_points":[],"endpoint":null},
+    {"route_number":"07","route_name":"Red Hills (Via Metha Nagar)","bus_name":"Krishna","boarding_points":[],"endpoint":null},
+    {"route_number":"08","route_name":"Anna Nagar","bus_name":"Ganga","boarding_points":[],"endpoint":null},
+    {"route_number":"09","route_name":"Mint Triplicane (Via Royapettah)","bus_name":"Missouri","boarding_points":[],"endpoint":null},
+    {"route_number":"10","route_name":"Mylapore / Besant Nagar","bus_name":"Thapti","boarding_points":[],"endpoint":null},
+    {"route_number":"11","route_name":"T. Nagar","bus_name":"Bhavani","boarding_points":[],"endpoint":null},
+    {"route_number":"12","route_name":"West Mambalam / Velachery","bus_name":"Nile","boarding_points":[],"endpoint":null},
+    {"route_number":"13","route_name":"Kundrathur / Tambaram","bus_name":"Congo","boarding_points":[],"endpoint":null},
+    {"route_number":"14","route_name":"Madipakkam (Via Nanganallur)","bus_name":"Godavari","boarding_points":[],"endpoint":null},
+    {"route_number":"15","route_name":"Madipakkam (Via Keelkatalai)","bus_name":"Brahmaputra","boarding_points":[],"endpoint":null},
+    {"route_number":"16","route_name":"Saidapet (ECR)","bus_name":"Narmada","boarding_points":[],"endpoint":null},
+    {"route_number":"17","route_name":"Adyar","bus_name":"Thiruveni A/C Bus","boarding_points":[],"endpoint":null},
+    {"route_number":"18","route_name":"Tambaram (Camp Road) Via Poondibazar - Court","bus_name":"Beas","boarding_points":[],"endpoint":null},
+    {"route_number":"19A","route_name":"Camp Road","bus_name":"Colombia","boarding_points":[],"endpoint":null},
+    {"route_number":"20","route_name":"Tambaram","bus_name":"Gambia","boarding_points":[],"endpoint":null},
+    {"route_number":"21","route_name":"Kalpakkam","bus_name":"Yellowstone","boarding_points":[],"endpoint":null},
+    {"route_number":"22","route_name":"Chengalpattu","bus_name":"Amaravathy","boarding_points":[],"endpoint":null},
+    {"route_number":"23","route_name":"Walajabad (Padappai)","bus_name":"Son","boarding_points":[],"endpoint":null}
+  ]
+}

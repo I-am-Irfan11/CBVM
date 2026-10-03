@@ -8,9 +8,11 @@ from pymongo import ReturnDocument
 from pymongo.errors import PyMongoError
 from starlette.concurrency import run_in_threadpool
 
+from app.api.auth import administrator, current_user, operator
 from app.api.dependencies import operations
 from app.database.connection import public
 from app.schemas.vehicle import MockRequest
+from app.ai.anpr import Detection
 from app.services.operations import utcnow
 
 router = APIRouter(tags=["Operations"])
@@ -30,8 +32,8 @@ def health(request: Request):
 
 
 @router.get("/dashboard")
-def dashboard(ops=Depends(operations)):
-    return ops.dashboard()
+def dashboard(ops=Depends(operations), user=Depends(current_user)):
+    return ops.dashboard(user)
 
 
 @router.get("/logs/today")
@@ -39,9 +41,13 @@ def today(
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     ops=Depends(operations),
+    user=Depends(current_user),
 ):
     start, end = ops.today_bounds()
     query = {"$or": [{"entry_time": {"$gte": start, "$lt": end}}, {"exit_time": {"$gte": start, "$lt": end}}]}
+    if user["role"] == "department_staff":
+        ids = [row["_id"] for row in ops.db.vehicles.find({"department": user.get("department")}, {"_id": 1})]
+        query["vehicle_id"] = {"$in": ids}
     return {
         "items": [
             public(row)
@@ -52,18 +58,11 @@ def today(
 
 
 @router.get("/activity")
-def activity(limit: int = Query(default=100, ge=1, le=500), ops=Depends(operations)):
-    return ops.activity(limit)
-
-
-@router.get("/purposes")
-def purposes(ops=Depends(operations)):
-    return [public(row) for row in ops.db.purposes.find({"active": True}).sort("sort_order", 1)]
-
-
-@router.get("/cameras")
-def cameras(ops=Depends(operations)):
-    return [public(row) for row in ops.db.cameras.find()]
+def activity(limit: int = Query(default=100, ge=1, le=500), ops=Depends(operations), user=Depends(current_user)):
+    ids = None
+    if user["role"] == "department_staff":
+        ids = [row["_id"] for row in ops.db.vehicles.find({"department": user.get("department")}, {"_id": 1})]
+    return ops.activity(limit, ids)
 
 
 @router.get("/reviews")
@@ -71,6 +70,7 @@ def reviews(
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     ops=Depends(operations),
+    user=Depends(operator),
 ):
     query = {"status": "pending"}
     return {
@@ -83,7 +83,7 @@ def reviews(
 
 
 @router.post("/reviews/{review_id}/dismiss")
-async def dismiss(review_id: str, request: Request, ops=Depends(operations)):
+async def dismiss(review_id: str, request: Request, ops=Depends(operations), user=Depends(operator)):
     def update():
         row = ops.db.review_items.find_one_and_update(
             {"_id": review_id, "status": "pending"},
@@ -107,11 +107,20 @@ async def dismiss(review_id: str, request: Request, ops=Depends(operations)):
 
 
 @router.post("/detections/mock")
-async def mock_detection(payload: MockRequest, request: Request):
+async def mock_detection(payload: MockRequest, request: Request, user=Depends(operator)):
     state = request.app.state
     if not state.settings.use_mock_ai:
         raise HTTPException(409, "Mock detections are disabled in real AI mode")
-    detection = (await run_in_threadpool(state.anpr.detect, payload.scenario))[0]
+    vehicle = await run_in_threadpool(
+        lambda: state.db.vehicles.find_one({"_id": payload.vehicle_id, "status": "active"})
+    )
+    if not vehicle:
+        raise HTTPException(404, "Choose an active vehicle from the registry.")
+    detection = Detection(
+        plate=vehicle["number_plate"], raw_text=vehicle["number_plate"], confidence=0.97,
+        bounding_box=(180, 180, 420, 260), valid=True, processing_time=0.1,
+        timestamp=utcnow(), camera_id=f"main-gate-{payload.direction.lower()}", direction=payload.direction,
+    )
     camera_id = f"main-gate-{payload.direction.lower()}"
     result = await run_in_threadpool(state.processor.process, detection, camera_id)
     if result["outcome"] == "accepted":
@@ -128,6 +137,18 @@ async def mock_detection(payload: MockRequest, request: Request):
 async def websocket_events(socket: WebSocket):
     origin = socket.headers.get("origin")
     if origin and origin not in socket.app.state.settings.cors_origins:
+        await socket.close(code=1008)
+        return
+    assertion = socket.headers.get("cf-access-jwt-assertion")
+    if not assertion:
+        await socket.close(code=1008)
+        return
+    try:
+        user = await run_in_threadpool(socket.app.state.auth.cloudflare_login, assertion)
+        if user["role"] == "department_staff":
+            await socket.close(code=1008)
+            return
+    except HTTPException:
         await socket.close(code=1008)
         return
     await socket.accept()

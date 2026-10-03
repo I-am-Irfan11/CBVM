@@ -2,7 +2,7 @@
 
 ANPR-based campus vehicle movement and trip-purpose logging, built with FastAPI, MongoDB/PyMongo, React, Vite and Tailwind CSS.
 
-This repository is the **Prompt 1 foundation**. It runs locally without MongoDB, a GPU, model weights or a camera using explicitly labelled, disposable demo storage and mock ANPR. Persistent operation uses MongoDB. The supplied GateLog design report was reviewed; see [report alignment](docs/report-alignment.md) for implemented and deferred modules.
+GateLog is an ANPR-based campus gate operations system built with FastAPI, MongoDB/PyMongo, React, Vite and Tailwind CSS. It supports Cloudflare Access sign-in, vehicle entry and exit, visitor and bus workflows, human review of uncertain plates, audit records, analytics and CSV exports. The registry-driven simulator uses a vehicle entered through the website; persistent use requires MongoDB, and real ANPR requires separately supplied model weights and OCR software.
 
 ## Start on Windows
 
@@ -16,7 +16,7 @@ cd D:\GateLog
 .\scripts\run_backend.bat
 ```
 
-Open a second terminal:
+Setup creates a private `.env` when needed and generates a local JWT secret. Existing `.env` values are preserved. Sign-in is handled by Cloudflare Access with Google; configure the Access settings described below before hosting GateLog. Open a second terminal:
 
 ```powershell
 cd D:\GateLog
@@ -25,7 +25,7 @@ cd D:\GateLog
 
 Open [GateLog](http://127.0.0.1:5173), [API docs](http://127.0.0.1:8000/docs), or [health](http://127.0.0.1:8000/health). Stop either server with Ctrl+C. Scripts bind to loopback and run one backend worker.
 
-Setup creates .venv, installs backend/dev dependencies, installs the frontend from package-lock.json and copies .env.example to .env only if .env does not exist. Existing settings are preserved. Download Python from [python.org](https://www.python.org/downloads/windows/) and Node from [nodejs.org](https://nodejs.org/en/download) if missing; reopen the terminal after installation.
+Setup creates `.venv`, installs backend/dev dependencies, installs the frontend from `package-lock.json`, and bootstraps local auth secrets. Download Python from [python.org](https://www.python.org/downloads/windows/) and Node from [nodejs.org](https://nodejs.org/en/download) if missing; reopen the terminal after installation.
 
 Manual equivalent:
 
@@ -33,6 +33,7 @@ Manual equivalent:
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r backend\requirements-dev.txt
 Copy-Item .env.example .env
+python scripts\bootstrap_env.py
 cd frontend
 npm.cmd ci
 npm.cmd run build
@@ -40,17 +41,27 @@ npm.cmd run build
 
 Use the virtual environment's Python directly; activation is optional. Avoid overwriting an existing .env when doing manual setup.
 
+## macOS setup
+
+Install Python 3.10+ and Node.js 22+, then run `bash scripts/setup.sh`. Start the backend and frontend in separate terminals with `bash scripts/start-backend.sh` and `bash scripts/start-frontend.sh`. Configure Cloudflare Access and Google before signing in. `bash scripts/seed-demo.sh` loads optional sample records into persistent MongoDB. `bash scripts/test.sh` runs the backend suite and frontend production build. These scripts use paths relative to the repository.
+
+## Authentication and roles
+
+The sign-up screen uses Cloudflare Access for Google sign-in. GateLog validates Cloudflare's signed identity assertion, creates the user record on first sign-in, and stores no Google or GateLog password. Add campus users to the Cloudflare Access policy. Set `CLOUDFLARE_ACCESS_TEAM_DOMAIN`, `CLOUDFLARE_ACCESS_AUDIENCE`, and `CLOUDFLARE_ADMIN_EMAILS` in the backend environment; the listed administrator email receives the admin role, while other allowed accounts receive the security role. Create the first administrator by adding their Google email to `CLOUDFLARE_ADMIN_EMAILS` before their first sign-in. Keep the API behind the same Cloudflare Access protected hostname and a Cloudflare Tunnel; do not expose the origin directly.
+
+For Cloudflare setup, add Google under **Cloudflare One → Integrations → Identity providers**, then create a **Self-hosted** Access application for the GateLog hostname and allow only campus emails or groups. Route the frontend and API through that same protected hostname so the browser's Access session reaches FastAPI. Copy the Access application's AUD tag and your team domain into the backend environment. Set `CLOUDFLARE_ADMIN_EMAILS` to the first administrator's Google email. For deployment, set `VITE_API_URL` to the protected GateLog origin and add that origin to `CORS_ORIGINS`.
+
+Vehicle registry, plate readings, movement history, review decisions and audit records belong in MongoDB Atlas (`DATABASE_MODE=mongodb`). Original uploaded ANPR images can be stored in a private Cloudflare R2 bucket. Create a bucket-scoped R2 API token and set `R2_ENDPOINT_URL`, `R2_BUCKET`, `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY`. GateLog stores only the private object key beside the detection record; an operator can request a short-lived signed read URL from `/anpr/scans/{object_key}`. The upload is skipped when R2 is not configured. Add an R2 lifecycle rule for the `scans/` prefix matching your retention policy (90 days by default).
+
 ## Demonstrate the full flow
 
-1. The first startup seeds seven fictional student, staff, bus and service vehicles, two directional camera records and campus trip purposes.
-2. On Dashboard choose **student / Entry**, then **Run detection**. Currently Inside and Entries Today increase; live activity records the plate.
+1. Start with an empty vehicle registry. Register a vehicle through **Vehicle Registry**.
+2. On Dashboard select that registered vehicle and **Entry**, then click **Run detection**. Currently Inside and Entries Today increase; live activity records the plate.
 3. Repeat the detection. No extra visit is created.
 4. Select **Exit** and run detection. The visit completes, duration is saved, and the inside count falls.
-5. Try **unknown** and **low confidence**. They appear in Review Queue without recording a movement.
+5. The simulator uses the selected registry plate; detections for unregistered vehicles are handled by real ANPR review flow.
 6. Register another vehicle through Vehicle Registry. Record an entry with a purpose, open Currently Inside to record its exit, and search Vehicle History.
 7. Edit or deactivate a registry record. Open visits must be closed before changing a plate or deactivating a vehicle.
-
-Mock scenarios: TN09AB1234 (student), TN07EF5678 (staff), TN01BC9001 (bus), TN12DE4567 (service), KA03MN7890 (unknown), and the intentionally ambiguous raw text TN O9 AB I234 (low confidence). These are synthetic fixtures, not real personal data.
 
 There are no invented historical movements. Dashboard counts and rows come from API writes. Memory mode resets on backend restart and cannot share data across processes.
 
@@ -66,7 +77,7 @@ backend/
     models/       auxiliary document contracts
     schemas/      API request validation
     services/     movement engine, review, capture and live events
-    routers/      vehicle, dashboard, WebSocket and image APIs
+    routers/      auth, vehicle, campus workflows, dashboard, WebSocket and image APIs
     main.py       application factory and lifespan
   tests/          isolated API/unit tests and opt-in MongoDB test
   requirements*.txt
@@ -78,13 +89,13 @@ frontend/
     pages/        dashboard
     services/     API client
   tests/          browser workflow and mobile layout tests
-database/seed/    deterministic fictional vehicle data
+database/seed/    deterministic fictional vehicles and sanitized HITS route references
 models/          model installation boundary
 scripts/         Windows setup, server, seed and test commands
 docs/            architecture and report alignment
 ```
 
-Capture -> ANPRService -> normalized detection -> confidence/registry decision -> entry/exit engine -> MongoDB -> WebSocket notification -> React refetch.
+Capture -> detector/OCR adapter -> tracking and plate validation -> confidence/registry decision -> movement engine -> MongoDB -> WebSocket notification -> React refetch.
 
 Details: [architecture](docs/architecture.md), [database](database/README.md), [real model setup](models/README.md). Registry includes all seven required vehicle types. Unknown/uncertain detections are preserved in an additional review_items collection. Accepted entry/exit detections retain raw OCR evidence on the visit.
 
@@ -125,7 +136,7 @@ All backend variables are read from the repository-root .env regardless of worki
 | MONGODB_URI | Local URI; mongodb+srv supported |
 | MONGODB_DATABASE | gatelog |
 | USE_MOCK_AI | true; selects mock vs real ANPR |
-| SEED_ON_STARTUP | true; idempotent demo records |
+| SEED_ON_STARTUP | true; creates gate camera records and historical transport references |
 | YOLO_MODEL_PATH | models/license_plate.pt; custom plate weights |
 | OCR_CONFIDENCE_THRESHOLD | 0.80; inclusive acceptance threshold |
 | DUPLICATE_COOLDOWN_SECONDS | 30; same vehicle, camera and direction |
@@ -139,6 +150,17 @@ All backend variables are read from the repository-root .env regardless of worki
 | CORS_ORIGINS | JSON array of frontend origins; also checked for WebSockets |
 | CAMPUS_TIMEZONE | Asia/Kolkata; day-boundary calculation |
 | RETENTION_DAYS | 90; completed/resolved records and audit retention |
+| JWT_SECRET_KEY | Generated by setup; required for persistent operation |
+| JWT_ACCESS_TOKEN_EXPIRE_MINUTES | 60 minute session lifetime |
+| COOKIE_SECURE | false for loopback development; true behind HTTPS |
+| CLOUDFLARE_ACCESS_TEAM_DOMAIN | Cloudflare Access team host, such as `campus.cloudflareaccess.com` |
+| CLOUDFLARE_ACCESS_AUDIENCE | Access application AUD tag used to validate identity assertions |
+| CLOUDFLARE_ADMIN_EMAILS | Comma-separated Google emails that receive the admin role |
+| R2_ENDPOINT_URL / R2_BUCKET | R2 S3 endpoint and private bucket name |
+| R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY | Bucket-scoped R2 S3 credentials; backend only |
+| R2_PRESIGNED_URL_EXPIRY_SECONDS | Signed scan image link lifetime; 300 seconds by default |
+| SEED_OPERATIONAL_DATA | false by default; set true only to load fictional sample vehicles and operations |
+| RECONNECT_DELAY_SECONDS | 1 second initial capture reconnect delay; backoff is capped |
 | VITE_API_URL | http://127.0.0.1:8000; public frontend API origin |
 
 Change frontend settings before rebuilding/restarting Vite. UI timestamps are explicitly shown in IST. Source FPS and FRAME_SAMPLE_RATE are different: sampling reduces inference calls; it is not a hardware performance guarantee.
@@ -157,15 +179,15 @@ To enable real recognition:
 
 Install the Tesseract executable on PATH, provide licensed custom plate-detector YOLO weights, set USE_MOCK_AI=false and YOLO_MODEL_PATH, then restart. Neither weights nor optional AI dependencies are loaded until recognition is requested. No models are downloaded automatically. A GPU is optional. See models/README.md for the boundary and platform compatibility.
 
-The image endpoint accepts **raw PNG/JPEG bytes**, not multipart:
+Mock mode does not interpret uploaded pixels; use the dashboard simulator to exercise a vehicle currently in the registry. The image endpoint accepts **raw PNG/JPEG bytes**, not multipart:
 
 ```powershell
 curl.exe -X POST "http://127.0.0.1:8000/anpr/detect?camera_id=main-gate-in" -H "Content-Type: image/jpeg" --data-binary "@D:\clips\plate.jpg"
 ```
 
-The endpoint runs recognition and processes the resulting movement/review. It is limited to 8 MiB uploads and 16 megapixels after decode. In mock mode a valid uploaded image produces the deterministic student scenario; image pixels are not interpreted.
+The endpoint runs recognition and processes the resulting movement/review. It is limited to 8 MiB uploads and 16 megapixels after decode. Mock mode does not interpret uploaded pixels; use the dashboard simulator to exercise a vehicle currently in the registry.
 
-For continuous video set RUN_VIDEO_WORKER=true, choose VIDEO_SOURCE, configure the corresponding address/path and CAMERA_ID. RTSP/webcam interruptions mark the camera offline and retry with backoff capped at 30 seconds. MP4 EOF stops capture; restart to replay. Capture closes the source on shutdown. Fixed IN/OUT camera directions are supported; tracking and virtual-line crossing are deferred. Do not point one fixed-direction configuration at a bidirectional lane.
+For continuous video set RUN_VIDEO_WORKER=true, choose VIDEO_SOURCE, configure the corresponding address/path and CAMERA_ID. The replaceable tracker supports fixed IN/OUT cameras and a BOTH camera with a configured virtual gate line. RTSP/webcam interruptions mark the camera offline and retry with backoff capped at 30 seconds. MP4 EOF stops capture; restart to replay. Capture closes the source on shutdown. Configure source URLs and camera credentials only in backend environment variables.
 
 ## API surface
 
@@ -179,11 +201,26 @@ For continuous video set RUN_VIDEO_WORKER=true, choose VIDEO_SOURCE, configure t
 | GET | /vehicles/inside | Open visits with total count |
 | GET | /vehicles/{id}/history | Paginated visits |
 | GET | /logs/today | Visits entering or exiting within the campus day |
-| GET | /dashboard /activity /cameras /purposes | Actual operational data |
-| POST | /detections/mock | Named scenario and IN/OUT direction |
+| GET | /dashboard /activity | Live operational summary and activity |
+| GET / POST / PUT | /visitors | Visitor registration and host/visit details |
+| GET / POST / PUT | /buses | Bus registry linked to vehicle and route references |
+| POST | /buses/{id}/trips and /trips/return | Departure and return records linked to gate movements |
+| GET | /transport/routes | Historical official HITS route references |
+| GET / POST / PUT | /cameras | Camera configuration and health records |
+| GET / POST / PUT | /purposes | Configurable trip purposes (admin writes) |
+| GET | /analytics | Filtered daily/hourly counts, purpose and vehicle summaries |
+| GET | /reports.csv | Filtered CSV export |
+| GET | /audit | Administrative and manual audit records (admin) |
+| GET / POST / PUT | /users | Account administration (admin) |
+| GET / PUT | /settings/retention | Retention configuration (admin) |
+| POST | /detections/mock | Simulate a registered vehicle and IN/OUT direction |
 | POST | /anpr/detect | Raw image recognition and processing |
 | GET | /reviews | Pending uncertain/unknown detections |
-| POST | /reviews/{id}/dismiss | Resolve review without a movement |
+| POST | /reviews/{id}/resolve | Confirm/correct or reject a reading with audit record |
+| POST | /reviews/{id}/dismiss | Dismiss without recording a movement |
+| GET | /auth/config /auth/me | Auth setup status / signed-in Google identity |
+| POST | /auth/logout | Sign out of GateLog and Cloudflare Access |
+| GET | /auth/me | Current user and CSRF token |
 | GET | /health | Database health and persistence mode |
 | WS | /ws/events | Live notifications and heartbeat |
 
@@ -224,15 +261,15 @@ Do not interpret tests with injected OCR/detectors as measured real recognition 
 
 ## Current phase boundaries
 
-Authentication/RBAC, exports, full visitor and bus CRUD, purpose administration, OCR confirmation/correction and single-camera tracking are later phases. The Review Queue currently supports inspection/dismissal and manual follow-up through registry/movement forms.
+HITS route data is historical: the official page labels the timetable 2023–2024. See [transport source notes](docs/transport-source.md); route names and bus names are reference data, not proof of current service. The snapshot deliberately omits stop times that were not included in the sanitized seed. The official-page importer can refresh only after the source site is reachable.
 
-Run **one Uvicorn worker**: cooldown locks and the WebSocket hub are process-local. Production scaling requires distributed event delivery, shared atomic cooldown and transactional state/audit updates. This foundation has no login and identifies audit actions as local-operator; keep it on loopback with synthetic data until access control is implemented.
+Run **one Uvicorn worker**: movement locks and the WebSocket hub are process-local. Multi-process production deployment needs shared event delivery, distributed movement coordination and transactional state/audit writes. The capture worker currently runs one configured source per backend process. PDF export is not included; CSV export is implemented. Real OCR accuracy and camera throughput have not been measured.
 
 ## Troubleshooting
 
 - **Python/npm not found:** install the prerequisites with PATH enabled and reopen the terminal. Use npm.cmd in PowerShell if npm.ps1 is blocked by execution policy.
 - **MongoDB server selection timeout:** verify the service/URI, Atlas IP allowlist and credentials; health never pretends the server is available. For disposable demos select DATABASE_MODE=memory explicitly.
-- **Empty data after restart:** expected in memory mode. Use MongoDB for persistence and SEED_ON_STARTUP=true for demo records.
+- **Empty data after restart:** expected in memory mode. Use MongoDB for persistence.
 - **Missing model/OCR:** mock mode needs neither. Real image requests return 503 until weights, optional packages and Tesseract are configured.
 - **Camera offline:** check VIDEO_SOURCE, address/path, CAMERA_ID and model dependencies. Live sources retry; MP4 ends normally when its frames run out.
 - **No real-time connection:** check the API origin and CORS_ORIGINS including scheme, hostname and port. WebSocket route is /ws/events; the UI refetches on reconnect.
@@ -240,5 +277,6 @@ Run **one Uvicorn worker**: cooldown locks and the WebSocket hub are process-loc
 - **Entry ignored after a rapid round trip:** the configured same-direction cooldown is working. Wait or reduce the cooldown for a controlled demo.
 - **Old records still present:** MongoDB TTL deletion is asynchronous; pending reviews and open visits intentionally have no expiry.
 - **Test dependency warnings on Python 3.14:** mongomock and Starlette emit upstream deprecation warnings; these are not assertion failures. The tested versions are recorded in backend/requirements-lock.txt.
+- **Google sign-in unavailable:** check the Cloudflare Access team domain, application AUD tag, Google identity provider, and allowed-email policy. Keep the backend behind the Access-protected Cloudflare Tunnel.
 
 Framework references: [FastAPI lifespan](https://fastapi.tiangolo.com/advanced/events/), [MongoDB partial indexes](https://www.mongodb.com/docs/manual/core/index-partial/), [Tailwind with Vite](https://tailwindcss.com/docs/installation/using-vite).

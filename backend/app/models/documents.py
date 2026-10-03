@@ -29,6 +29,6 @@ class Bus(BaseModel):
 class Camera(BaseModel):
     camera_name: str
     location: str
-    direction: Literal["IN", "OUT"]
+    direction: Literal["IN", "OUT", "BOTH"]
     health_status: Literal["idle", "online", "offline", "mock"] = "idle"
     last_frame_time: datetime | None = None

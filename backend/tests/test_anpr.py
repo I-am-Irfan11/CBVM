@@ -47,6 +47,9 @@ def test_review_confidence_dedup_and_dismiss(client, scenario):
 
 
 def test_real_mode_lazy_and_mock_disabled():
+    from datetime import datetime, timezone
+    from app.services.auth import password_hash
+
     app = create_app(
         Settings(
             _env_file=None,
@@ -58,7 +61,12 @@ def test_real_mode_lazy_and_mock_disabled():
     )
     with TestClient(app) as client:
         assert client.get("/health").status_code == 200
-        assert client.post("/detections/mock", json={"scenario": "student"}).status_code == 409
+        app.state.db.users.insert_one({"_id": "test-admin", "username": "admin", "email": "admin@test.local",
+            "full_name": "Test Admin", "role": "admin", "active": True,
+            "password_hash": password_hash("TestOnly-password-123!"), "created_at": datetime.now(timezone.utc)})
+        token = app.state.auth.login("admin", "TestOnly-password-123!", "test")["access_token"]
+        assert client.post("/detections/mock", headers={"Authorization": f"Bearer {token}"},
+                           json={"scenario": "student"}).status_code == 409
 
 
 def test_mock_video():

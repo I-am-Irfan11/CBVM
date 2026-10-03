@@ -1,17 +1,13 @@
-# GateLog Phase 1 architecture
+# GateLog architecture
 
-FastAPI routers validate requests and call synchronous services in a thread pool. PyMongo is the production database client. An explicitly selected mongomock adapter supports disposable demos and tests with the same queries/index declarations.
+FastAPI routes validate requests, apply authentication and role checks, then call the services. PyMongo is the persistent database client. Explicit memory mode uses mongomock for disposable demos and tests.
 
-Capture -> ANPRService -> DetectionProcessor -> Operations -> MongoDB -> EventHub -> React
+VideoSource -> ANPRService -> optional tracker and gate-line direction -> DetectionProcessor -> Operations -> MongoDB -> WebSocket EventHub -> React API refetch.
 
-ANPRService has mock and real adapters. OCRService is independently replaceable. VideoSource has OpenCV RTSP/MP4/webcam and mock adapters. Models load lazily and capture is opt-in. Images are processed in memory and not retained.
+ANPRService has deterministic mock and lazily loaded real adapters. OCRService can be replaced independently. OpenCV supports RTSP, MP4 and webcam sources. Frames are processed in memory and are not retained by default. The capture worker supervises one configured source per process.
 
-The movement engine normalizes registration at the registry boundary, uses server UTC timestamps by default, pairs exits with open visits, rejects out-of-order/future/naive timestamps, and uses total_seconds for multi-day durations. Dates are stored in UTC; today's counts use CAMPUS_TIMEZONE. The UI displays IST.
+Authentication uses Cloudflare Access with Google as the identity provider. FastAPI validates each `Cf-Access-Jwt-Assertion` signature against the Access JWKS, and checks its issuer and application audience before mapping the Google email to a GateLog role. The backend stores account metadata only, never a password. Keep the origin behind Cloudflare Tunnel and restrict eligible Google accounts in the Access policy. Roles are enforced by backend dependencies, and department staff queries are scoped. Audit entries record actor ID and role. Audit writes and business writes are separate, so MongoDB transactions are needed for atomic audit guarantees.
 
-A unique partial MongoDB index enforces one open visit. A process lock serializes state transitions and registry deactivation. Event IDs are unique per direction and retries return duplicate=true. Completed logs retain entry and exit events. Phase 1 supports **one Uvicorn worker**. Multi-process cooldown, distributed WebSocket fan-out and transactional audit persistence are later work.
+The movement engine stores UTC timestamps, checks the configured campus timezone for day boundaries, pairs exits with open visits, rejects invalid chronology, and calculates total seconds. A partial unique database index enforces one open visit per vehicle. MongoDB stores plate and movement metadata; when R2 is configured, the original uploaded image goes to a private bucket and its object key is attached to the detection. Operators receive short-lived signed image URLs after the backend confirms the key belongs to a stored detection. Set an R2 lifecycle rule to match `RETENTION_DAYS`. Process-local locks and the in-memory WebSocket hub mean GateLog must run with one Uvicorn worker until shared coordination/event delivery is added.
 
-WebSocket clients get connected, vehicle.entry, vehicle.exit, review.item, review.resolved and camera.status events. The server sends heartbeats. Each client has a bounded 100-event queue; slow clients can lose transient events. The browser reconnects with capped backoff and refetches canonical API state on reconnect/events, plus every 30 seconds. Events are notifications, not a durable delivery queue.
-
-Audit events identify local-operator because authentication/RBAC is not implemented in this foundation. Bind to loopback and use fictional data until authorization is added. MongoDB operations and audit insertion are separate writes; a write can persist even if its subsequent audit insert fails. Movement event IDs permit safe retries. Automatic barrier control is absent.
-
-The report's full ten-module vision exceeds this prompt's explicit Phase 1 definition. See report-alignment.md for implemented boundaries and deferred work.
+The HITS transport collection is a historical reference dataset and is not used to seed operational buses. Vehicle, bus, visitor and movement records marked demo are fictional. See [transport source notes](transport-source.md) and [report alignment](report-alignment.md).

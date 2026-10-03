@@ -19,6 +19,17 @@ def connect(settings):
 
 
 def create_indexes(db):
+    db.users.create_index("username", unique=True)
+    db.users.create_index("email", unique=True)
+    db.users.create_index([("auth_provider", 1), ("provider_subject", 1)], unique=True, sparse=True)
+    db.sessions.create_index("expires_at", expireAfterSeconds=0)
+    db.sessions.create_index("user_id")
+    db.login_attempts.create_index("expires_at", expireAfterSeconds=0)
+    db.transport_routes.create_index("route_number", unique=True)
+    db.visitors.create_index([("host_department", ASCENDING), ("created_at", DESCENDING)])
+    db.bus_trips.create_index("vehicle_id", unique=True, partialFilterExpression={"status": "AWAY"})
+    db.bus_trips.create_index([("vehicle_id", ASCENDING), ("departure_time", DESCENDING)])
+    db.bus_trips.create_index("expires_at", expireAfterSeconds=0)
     db.vehicles.create_index("number_plate", unique=True)
     db.vehicles.create_index([("status", ASCENDING), ("vehicle_type", ASCENDING)])
     db.vehicle_logs.create_index(

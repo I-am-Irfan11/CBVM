@@ -1,10 +1,19 @@
 export const API_URL = (
   import.meta.env.VITE_API_URL || "http://127.0.0.1:8000"
 ).replace(/\/$/, "");
+let csrfToken = "";
+export function setCsrfToken(value) {
+  csrfToken = value || "";
+}
 export async function api(path, options = {}) {
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
-    headers: { "Content-Type": "application/json", ...options.headers },
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.method && options.method !== "GET" ? { "X-CSRF-Token": csrfToken } : {}),
+      ...options.headers,
+    },
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
   });
   const data = await response.json();

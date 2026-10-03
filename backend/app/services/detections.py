@@ -36,9 +36,12 @@ class DetectionProcessor:
             reason = "Inactive vehicle"
         if reason is None:
             try:
+                direction = detection.direction or camera["direction"]
+                if direction not in ("IN", "OUT"):
+                    raise HTTPException(422, "Gate crossing direction requires review")
                 result = self.ops.move(
                     vehicle["_id"],
-                    camera["direction"],
+                    direction,
                     Movement(
                         camera_id=camera_id,
                         detection_confidence=detection.confidence,

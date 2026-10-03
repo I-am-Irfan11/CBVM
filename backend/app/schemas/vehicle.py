@@ -31,6 +31,7 @@ class Movement(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     camera_id: str = Field(default="main-gate-in", min_length=1, max_length=80)
     purpose: str = Field(default="Campus visit", min_length=1, max_length=120)
+    custom_purpose: str | None = Field(default=None, max_length=240)
     tracking_id: str | None = Field(default=None, min_length=1, max_length=100)
     event_id: str | None = Field(default=None, min_length=1, max_length=100)
     detection_confidence: float = Field(default=1, ge=0, le=1)
@@ -45,5 +46,5 @@ class Movement(BaseModel):
 
 
 class MockRequest(BaseModel):
-    scenario: Literal["student", "staff", "bus", "service", "unknown", "low_confidence"] = "student"
+    vehicle_id: str = Field(min_length=1, max_length=80)
     direction: Literal["IN", "OUT"] = "IN"

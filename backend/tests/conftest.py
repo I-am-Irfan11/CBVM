@@ -21,6 +21,16 @@ def app():
 @pytest.fixture
 def client(app):
     with TestClient(app) as client:
+        from app.services.auth import password_hash
+        from datetime import datetime, timezone
+
+        app.state.db.users.insert_one({
+            "_id": "test-admin", "username": "admin", "email": "admin@test.local",
+            "full_name": "Test Admin", "role": "admin", "department": None, "active": True,
+            "password_hash": password_hash("TestOnly-password-123!"), "created_at": datetime.now(timezone.utc),
+        })
+        token = app.state.auth.login("admin", "TestOnly-password-123!", "test-client")["access_token"]
+        client.headers["Authorization"] = f"Bearer {token}"
         yield client
 
 

@@ -16,6 +16,8 @@ if errorlevel 1 exit /b 1
 ".venv\Scripts\python.exe" -m pip install -r backend\requirements-dev.txt
 if errorlevel 1 exit /b 1
 if not exist ".env" copy /y ".env.example" ".env" >nul
+python scripts\bootstrap_env.py
+if errorlevel 1 exit /b 1
 pushd frontend
 call npm.cmd ci
 set "GATELOG_RESULT=%ERRORLEVEL%"

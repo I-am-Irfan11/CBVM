@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from pathlib import Path
 from time import perf_counter
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -17,6 +18,10 @@ class Detection(BaseModel):
     valid: bool
     processing_time: float  # milliseconds
     timestamp: datetime
+    tracking_id: str | None = None
+    camera_id: str | None = None
+    direction: Literal["IN", "OUT"] | None = None
+    capture_key: str | None = None
 
 
 class ANPRService(ABC):
@@ -30,19 +35,11 @@ class OCRService(ABC):
 
 
 class MockANPRService(ANPRService):
-    scenarios = {
-        "student": ("TN 09 AB 1234", 0.98),
-        "staff": ("TN07EF5678", 0.96),
-        "bus": ("TN01BC9001", 0.97),
-        "service": ("TN12DE4567", 0.94),
-        "unknown": ("KA03MN7890", 0.93),
-        "low_confidence": ("TN O9 AB I234", 0.43),
-    }
-
     def detect(self, frame=None):
         started = perf_counter()
-        scenario = frame if isinstance(frame, str) else "student"
-        raw, confidence = self.scenarios[scenario]
+        if not isinstance(frame, str) or not frame.strip():
+            return []
+        raw, confidence = frame.strip(), 0.97
         plate = normalize_plate(raw)
         return [
             Detection(

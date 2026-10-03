@@ -20,6 +20,10 @@ export default defineConfig({
         USE_MOCK_AI: "true",
         RUN_VIDEO_WORKER: "false",
         SEED_ON_STARTUP: "true",
+        JWT_SECRET_KEY: "test-only-not-a-deployment-secret-1234567890",
+        SEED_ADMIN_PASSWORD: "TestOnly-password-123!",
+        SEED_SECURITY_PASSWORD: "TestOnly-password-123!",
+        SEED_DEPARTMENT_PASSWORD: "TestOnly-password-123!",
       },
     },
     {

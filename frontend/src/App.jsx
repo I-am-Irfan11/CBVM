@@ -8,7 +8,7 @@ import {
   History,
   RefreshCw,
 } from "lucide-react";
-import { api } from "./services/api";
+import { api, setCsrfToken } from "./services/api";
 import { useApi } from "./hooks/useApi";
 import { useLiveEvents } from "./hooks/useLiveEvents";
 import Shell, { pages } from "./layouts/Shell";
@@ -28,6 +28,9 @@ import {
 import VehicleForm, { vehicleTypes } from "./components/VehicleForm";
 import MovementForm from "./components/MovementForm";
 import DemoControls from "./components/DemoControls";
+import Login from "./components/Login";
+import OperationsPages from "./pages/OperationsPages";
+import ReviewForm from "./components/ReviewForm";
 
 const initialPage = () =>
   pages.some((item) => item[0] === location.hash.slice(1))
@@ -46,6 +49,10 @@ export default function App() {
   const [vehicleId, setVehicleId] = useState("");
   const [plateSearch, setPlateSearch] = useState("");
   const [pending, setPending] = useState(false);
+  const [user, setUser] = useState(undefined);
+  const [reviewItem, setReviewItem] = useState(null);
+  const [visitorReviewId, setVisitorReviewId] = useState(null);
+  const [visitorReviewPlate, setVisitorReviewPlate] = useState("");
   const refresh = useCallback(() => setRevision((value) => value + 1), []);
   const liveStatus = useLiveEvents(refresh);
   const dashboard = useApi("/dashboard", revision);
@@ -60,12 +67,23 @@ export default function App() {
             ? "/activity?limit=100"
             : page === "reviews"
               ? `/reviews?limit=25&offset=${offset}`
-              : null;
+              : ({ visitors: "/visitors", buses: "/buses", reports: "/analytics?days=30",
+                  cameras: "/cameras", transport: "/transport/routes", purposes: "/purposes?include_inactive=true",
+                  users: "/users", audit: "/audit" }[page] || null);
   const view = useApi(path, revision);
   const notify = useCallback(
     (text, error = false) => setNotification({ text, error }),
     [],
   );
+  useEffect(() => {
+    let active = true;
+    api("/auth/me").then(session => {
+      if (!active) return;
+      setCsrfToken(session.csrf_token);
+      setUser(session.user);
+    }).catch(() => { if (active) setUser(null); });
+    return () => { active = false; };
+  }, []);
   useEffect(() => {
     const change = () => {
       setPage(initialPage());
@@ -84,6 +102,29 @@ export default function App() {
     location.hash = next;
     setOffset(0);
     if (id) setVehicleId(id);
+  }
+  async function logout() {
+    try {
+      const result = await api("/auth/logout", { method: "POST" });
+      if (result.cloudflare) {
+        location.assign("/cdn-cgi/access/logout");
+        return;
+      }
+    } catch { /* Access session may already have expired */ }
+    setCsrfToken("");
+    setUser(null);
+  }
+  function authenticated(nextUser) {
+    setUser(nextUser);
+    if (nextUser.role === "department_staff" && !["dashboard", "history", "reports"].includes(page)) {
+      setPage("dashboard");
+      location.hash = "dashboard";
+    }
+    if (nextUser.role === "security" && ["users", "audit", "purposes"].includes(page)) {
+      setPage("dashboard");
+      location.hash = "dashboard";
+    }
+    refresh();
   }
   async function saveVehicle(payload, id) {
     await api(id ? `/vehicles/${id}` : "/vehicles", {
@@ -183,7 +224,17 @@ export default function App() {
       "Review queue",
       "Inspect uncertain readings before taking action.",
     ],
+    visitors: ["Visitor register", "Record unknown vehicles and who they are visiting."],
+    buses: ["Bus operations", "Connect registered campus buses to route references and trips."],
+    reports: ["Movement reports", "Explore real campus traffic and export filtered records."],
+    cameras: ["Camera health", "See the last frame received from each gate source."],
+    transport: ["HITS transport references", "Historical route identifiers from the official transport page."],
+    purposes: ["Trip purposes", "Manage the reasons captured with campus movements."],
+    users: ["User access", "Manage GateLog accounts and roles."],
+    audit: ["Audit log", "Review administrative and manual changes."],
   };
+  if (user === undefined) return <main className="login-page"><p>Checking session…</p></main>;
+  if (!user) return <Login />;
   return (
     <>
       <a href="#main-content" className="skip-link">
@@ -194,6 +245,8 @@ export default function App() {
         navigate={navigate}
         status={liveStatus}
         dashboard={dashboard.data}
+        user={user}
+        logout={logout}
       >
         {page === "dashboard" ? (
           <DataState state={dashboard} retry={refresh}>
@@ -491,13 +544,11 @@ export default function App() {
                           key: "actions",
                           label: "Action",
                           render: (row) => (
-                            <button
-                              className="button secondary small"
-                              disabled={pending}
-                              onClick={() => dismissReview(row.id)}
-                            >
-                              Dismiss review
-                            </button>
+                            <div className="row-actions">
+                              <button className="button small" disabled={pending} onClick={() => setReviewItem(row)}>Confirm / correct</button>
+                              {row.reason === "Unregistered vehicle" ? <button className="button secondary small" onClick={() => {setVisitorReviewId(row.id);setVisitorReviewPlate(row.plate||"");navigate("visitors");}}>Register visitor</button> : null}
+                              <button className="button secondary small" disabled={pending} onClick={() => dismissReview(row.id)}>Reject</button>
+                            </div>
                           ),
                         },
                       ]}
@@ -511,10 +562,16 @@ export default function App() {
                 </Card>
               </>
             ) : null}
+            {headings[page] && !["registry", "inside", "history", "activity", "reviews"].includes(page) ? (
+              <OperationsPages page={page} state={view} user={user} notify={notify} refresh={refresh}
+                reviewId={visitorReviewId} reviewPlate={visitorReviewPlate}
+                clearReviewId={() => {setVisitorReviewId(null);setVisitorReviewPlate("");}} />
+            ) : null}
           </>
         )}
       </Shell>
       <Notification item={notification} dismiss={() => setNotification(null)} />
+      {reviewItem ? <ReviewForm review={reviewItem} close={() => setReviewItem(null)} notify={notify} refresh={refresh} /> : null}
       {form ? (
         <VehicleForm
           vehicle={form.id ? form : null}

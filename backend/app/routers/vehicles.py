@@ -3,6 +3,7 @@ import re
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from starlette.concurrency import run_in_threadpool
 
+from app.api.auth import administrator, current_user, operator, guard_vehicle, restricted_vehicle, vehicle_scope
 from app.api.dependencies import operations
 from app.core.plates import normalize_plate
 from app.database.connection import public
@@ -12,7 +13,7 @@ router = APIRouter(prefix="/vehicles", tags=["Vehicles"])
 
 
 @router.post("", status_code=201)
-def create_vehicle(payload: VehicleCreate, ops=Depends(operations)):
+def create_vehicle(payload: VehicleCreate, ops=Depends(operations), user=Depends(administrator)):
     return ops.register(payload)
 
 
@@ -23,8 +24,9 @@ def list_vehicles(
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     ops=Depends(operations),
+    user=Depends(current_user),
 ):
-    query = {}
+    query = vehicle_scope(user)
     if search:
         query["$or"] = [
             {"number_plate": {"$regex": re.escape(normalize_plate(search)), "$options": "i"}},
@@ -34,7 +36,7 @@ def list_vehicles(
         query["vehicle_type"] = vehicle_type
     return {
         "items": [
-            public(row)
+            restricted_vehicle(user, public(row))
             for row in ops.db.vehicles.find(query).sort("number_plate", 1).skip(offset).limit(limit)
         ],
         "total": ops.db.vehicles.count_documents(query),
@@ -46,11 +48,17 @@ def inside(
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     ops=Depends(operations),
+    user=Depends(current_user),
 ):
     query = {"status": "INSIDE"}
+    if user["role"] == "department_staff":
+        ids = [row["_id"] for row in ops.db.vehicles.find(vehicle_scope(user), {"_id": 1})]
+        query["vehicle_id"] = {"$in": ids}
     return {
         "items": [
-            public(row)
+            ({**public(row), "owner_name": (ops.db.vehicles.find_one({"_id": row["vehicle_id"]}) or {}).get("owner_name")}
+             if user["role"] != "department_staff" else {key: row.get(key) for key in
+                 ("id", "number_plate", "vehicle_type", "purpose", "entry_time", "status")})
             for row in ops.db.vehicle_logs.find(query).sort("entry_time", -1).skip(offset).limit(limit)
         ],
         "total": ops.db.vehicle_logs.count_documents(query),
@@ -58,25 +66,28 @@ def inside(
 
 
 @router.get("/by-plate/{plate}")
-def by_plate(plate: str, ops=Depends(operations)):
+def by_plate(plate: str, ops=Depends(operations), user=Depends(current_user)):
     row = ops.db.vehicles.find_one({"number_plate": normalize_plate(plate)})
     if not row:
         raise HTTPException(404, "Vehicle not found")
-    return public(row)
+    guard_vehicle(user, row)
+    return restricted_vehicle(user, public(row))
 
 
 @router.get("/{vehicle_id}")
-def get_vehicle(vehicle_id: str, ops=Depends(operations)):
-    return public(ops.vehicle(vehicle_id))
+def get_vehicle(vehicle_id: str, ops=Depends(operations), user=Depends(current_user)):
+    row = ops.vehicle(vehicle_id)
+    guard_vehicle(user, row)
+    return restricted_vehicle(user, public(row))
 
 
 @router.put("/{vehicle_id}")
-def update_vehicle(vehicle_id: str, payload: VehicleCreate, ops=Depends(operations)):
+def update_vehicle(vehicle_id: str, payload: VehicleCreate, ops=Depends(operations), user=Depends(administrator)):
     return ops.update(vehicle_id, payload)
 
 
 @router.delete("/{vehicle_id}")
-def deactivate_vehicle(vehicle_id: str, ops=Depends(operations)):
+def deactivate_vehicle(vehicle_id: str, ops=Depends(operations), user=Depends(administrator)):
     return ops.deactivate(vehicle_id)
 
 
@@ -93,14 +104,14 @@ async def movement(request, response, ops, vehicle_id, direction, payload):
 
 @router.post("/{vehicle_id}/entry")
 async def entry(
-    vehicle_id: str, payload: Movement, request: Request, response: Response, ops=Depends(operations)
+    vehicle_id: str, payload: Movement, request: Request, response: Response, ops=Depends(operations), user=Depends(operator)
 ):
     return await movement(request, response, ops, vehicle_id, "IN", payload)
 
 
 @router.post("/{vehicle_id}/exit")
 async def exit_vehicle(
-    vehicle_id: str, payload: Movement, request: Request, response: Response, ops=Depends(operations)
+    vehicle_id: str, payload: Movement, request: Request, response: Response, ops=Depends(operations), user=Depends(operator)
 ):
     return await movement(request, response, ops, vehicle_id, "OUT", payload)
 
@@ -111,8 +122,10 @@ def history(
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     ops=Depends(operations),
+    user=Depends(current_user),
 ):
-    ops.vehicle(vehicle_id)
+    vehicle = ops.vehicle(vehicle_id)
+    guard_vehicle(user, vehicle)
     query = {"vehicle_id": vehicle_id}
     return {
         "items": [

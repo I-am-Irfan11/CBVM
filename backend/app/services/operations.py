@@ -8,6 +8,7 @@ from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError
 
 from app.database.connection import public
+from app.core.identity import actor
 
 
 def utcnow():
@@ -23,10 +24,14 @@ class Operations:
 
     def audit(self, action, old=None, new=None):
         now = utcnow()
+        identity = actor.get()
+        if isinstance(identity, str):
+            identity = {"user_id": identity, "role": "system" if identity.startswith("system:") else None}
         self.db.audit_logs.insert_one(
             {
                 "_id": str(uuid4()),
-                "user": "local-operator",
+                "user": identity.get("user_id"),
+                "role": identity.get("role"),
                 "action": action,
                 "time": now,
                 "old_values": public(old),
@@ -84,7 +89,7 @@ class Operations:
             camera = self.db.cameras.find_one({"_id": payload.camera_id})
             if not camera:
                 raise HTTPException(404, "Camera not found")
-            if camera["direction"] != direction:
+            if camera["direction"] not in (direction, "BOTH"):
                 raise HTTPException(422, "Camera direction does not match this movement")
             if payload.detection_confidence < self.settings.ocr_confidence_threshold:
                 raise HTTPException(422, "Detection confidence requires review")
@@ -127,7 +132,8 @@ class Operations:
                     "entry_time": now,
                     "exit_time": None,
                     "duration_seconds": None,
-                    "purpose": payload.purpose,
+                    "purpose": (payload.custom_purpose.strip()
+                                if payload.purpose == "Other" and payload.custom_purpose else payload.purpose),
                     "camera_id": payload.camera_id,
                     "tracking_id": payload.tracking_id,
                     "detection_confidence": payload.detection_confidence,
@@ -178,26 +184,56 @@ class Operations:
         start = local.replace(hour=0, minute=0, second=0, microsecond=0)
         return start.astimezone(timezone.utc), (start + timedelta(days=1)).astimezone(timezone.utc)
 
-    def dashboard(self):
+    def dashboard(self, user=None):
         start, end = self.today_bounds()
         window = {"$gte": start, "$lt": end}
+        scope = {}
+        camera_rows = [public(row) for row in self.db.cameras.find()]
+        vehicle_query = {"status": "active"}
+        if user and user.get("role") == "department_staff":
+            vehicle_query["department"] = user.get("department")
+            vehicle_ids = [row["_id"] for row in self.db.vehicles.find(vehicle_query, {"_id": 1})]
+            scope = {"vehicle_id": {"$in": vehicle_ids}}
+            camera_rows = []
+        inside_rows = []
+        for movement in self.db.vehicle_logs.find({**scope, "status": "INSIDE"}).sort("entry_time", -1).limit(100):
+            vehicle = self.db.vehicles.find_one({"_id": movement["vehicle_id"]}) or {}
+            visitor = self.db.visitors.find_one({"vehicle_id": movement["vehicle_id"]})
+            item = public(movement)
+            item["owner_name"] = vehicle.get("owner_name") if not user or user.get("role") != "department_staff" else None
+            item["visitor_name"] = visitor.get("visitor_name") if visitor and (not user or user.get("role") != "department_staff") else None
+            inside_rows.append(item)
+        pending = [] if user and user.get("role") == "department_staff" else [
+            public(row) for row in self.db.review_items.find({"status": "pending"}).sort("timestamp", -1).limit(5)
+        ]
+        active_bus_trips = ([] if user and user.get("role") == "department_staff" else
+                            [public(row) for row in self.db.bus_trips.find({"status": "AWAY"}).sort("departure_time", -1)])
         return {
-            "registered_vehicles": self.db.vehicles.count_documents({"status": "active"}),
-            "currently_inside": self.db.vehicle_logs.count_documents({"status": "INSIDE"}),
-            "entries_today": self.db.vehicle_logs.count_documents({"entry_time": window}),
-            "exits_today": self.db.vehicle_logs.count_documents({"exit_time": window}),
-            "pending_reviews": self.db.review_items.count_documents({"status": "pending"}),
-            "recent_activity": self.activity(10),
-            "cameras": [public(row) for row in self.db.cameras.find()],
+            "registered_vehicles": self.db.vehicles.count_documents(vehicle_query),
+            "currently_inside": self.db.vehicle_logs.count_documents({**scope, "status": "INSIDE"}),
+            "entries_today": self.db.vehicle_logs.count_documents({**scope, "entry_time": window}),
+            "exits_today": self.db.vehicle_logs.count_documents({**scope, "exit_time": window}),
+            "pending_reviews": (self.db.review_items.count_documents({"status": "pending"})
+                                if not user or user.get("role") != "department_staff" else 0),
+            "recent_activity": self.activity(10, scope.get("vehicle_id")),
+            "cameras": camera_rows,
+            "inside_rows": inside_rows,
+            "pending_review_items": pending,
+            "unknown_vehicles": sum(row.get("reason") == "Unregistered vehicle" for row in pending),
+            "bus_trips_away": active_bus_trips,
+            "bus_count": self.db.buses.count_documents({"status": "active"}) if not user or user.get("role") != "department_staff" else 0,
             "database_mode": self.settings.database_mode,
             "mock_ai": self.settings.use_mock_ai,
             "campus_timezone": self.settings.campus_timezone,
         }
 
-    def activity(self, limit=100):
+    def activity(self, limit=100, vehicle_filter=None):
         events = []
         for field, kind in (("entry_time", "vehicle.entry"), ("exit_time", "vehicle.exit")):
-            for row in self.db.vehicle_logs.find({field: {"$ne": None}}).sort(field, -1).limit(limit):
+            query = {field: {"$ne": None}}
+            if vehicle_filter is not None:
+                query["vehicle_id"] = vehicle_filter
+            for row in self.db.vehicle_logs.find(query).sort(field, -1).limit(limit):
                 events.append(
                     {
                         "id": f"{row['_id']}-{kind}",

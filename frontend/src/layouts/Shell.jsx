@@ -16,8 +16,21 @@ export const pages = [
   ["history", "Vehicle history", History],
   ["activity", "Live activity", Radio],
   ["reviews", "Review queue", ScanLine],
+  ["visitors", "Visitors", CarFront],
+  ["buses", "Bus operations", CarFront],
+  ["reports", "Reports", History],
+  ["cameras", "Cameras", Radio],
+  ["transport", "Transport references", CarFront],
+  ["purposes", "Trip purposes", History],
+  ["users", "User access", ShieldCheck],
+  ["audit", "Audit log", ShieldCheck],
 ];
-export default function Shell({ page, navigate, status, dashboard, children }) {
+export default function Shell({ page, navigate, status, dashboard, user, logout, children }) {
+  const visiblePages = user?.role === "department_staff"
+    ? pages.filter(([id]) => ["dashboard", "history", "reports"].includes(id))
+    : user?.role === "security"
+      ? pages.filter(([id]) => !["users", "audit", "purposes"].includes(id))
+      : pages;
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -37,7 +50,7 @@ export default function Shell({ page, navigate, status, dashboard, children }) {
         </a>
         <div className="sidebar-label">WORKSPACE</div>
         <nav aria-label="Main navigation">
-          {pages.map(([id, label, Icon]) => (
+          {visiblePages.map(([id, label, Icon]) => (
             <a
               href={`#${id}`}
               key={id}
@@ -67,7 +80,7 @@ export default function Shell({ page, navigate, status, dashboard, children }) {
           <span>
             Campus security{" "}
             <span className="breadcrumb">
-              / {pages.find((item) => item[0] === page)?.[1]}
+              / {visiblePages.find((item) => item[0] === page)?.[1]}
             </span>
           </span>
           <div className="topbar-status">
@@ -77,7 +90,8 @@ export default function Shell({ page, navigate, status, dashboard, children }) {
             {status === "connected"
               ? "Live updates connected"
               : "Reconnecting live updates"}
-            <span className="avatar">GS</span>
+            <span className="account-label">{user?.full_name} · {user?.role?.replaceAll("_", " ")}</span>
+            <button className="button secondary small" onClick={logout}>Sign out</button>
           </div>
         </header>
         <main id="main-content">
@@ -91,7 +105,7 @@ export default function Shell({ page, navigate, status, dashboard, children }) {
         </main>
         <footer>
           GateLog / Campus vehicle operations{" "}
-          <span>Phase 1 · Times shown in IST</span>
+          <span>Campus gate operations · Times shown in IST</span>
         </footer>
       </div>
     </div>
