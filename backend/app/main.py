@@ -20,6 +20,24 @@ from app.services.auth import AuthService
 from app.services.scan_storage import ScanStorage
 
 
+class ApiPrefixMiddleware:
+    """Allow the API to work when the hosting layer preserves its public /api prefix."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] in {"http", "websocket"}:
+            path = scope.get("path", "")
+            if path == "/api" or path.startswith("/api/"):
+                scope = dict(scope)
+                scope["path"] = path[4:] or "/"
+                raw_path = scope.get("raw_path")
+                if raw_path and (raw_path == b"/api" or raw_path.startswith(b"/api/")):
+                    scope["raw_path"] = raw_path[4:] or b"/"
+        await self.app(scope, receive, send)
+
+
 def create_app(settings: Settings | None = None):
     settings = settings or Settings()
 
@@ -65,6 +83,7 @@ def create_app(settings: Settings | None = None):
         allow_methods=["GET", "POST", "PUT", "DELETE"],
         allow_headers=["Content-Type", "X-CSRF-Token", "Authorization"],
     )
+    app.add_middleware(ApiPrefixMiddleware)
     app.include_router(vehicles.router)
     app.include_router(dashboard.router)
     app.include_router(anpr.router)
