@@ -1,0 +1,1 @@
+"""GateLog campus vehicle operations."""

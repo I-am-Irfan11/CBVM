@@ -1,0 +1,9 @@
+[
+  {"id":"demo-student-1","number_plate":"TN09AB1234","vehicle_type":"student","owner_name":"Demo Student 01","student_id":"DEMO-CSE-001","department":"Computer Science","vehicle_model":"Honda Activa"},
+  {"id":"demo-student-2","number_plate":"TN10CD2468","vehicle_type":"student","owner_name":"Demo Student 02","student_id":"DEMO-ECE-002","department":"Electronics","vehicle_model":"TVS Jupiter"},
+  {"id":"demo-staff-1","number_plate":"TN07EF5678","vehicle_type":"staff","owner_name":"Demo Faculty 01","department":"Mechanical Engineering","vehicle_model":"Maruti Baleno"},
+  {"id":"demo-staff-2","number_plate":"TN22GH3456","vehicle_type":"staff","owner_name":"Demo Faculty 02","department":"Administration","vehicle_model":"Hyundai i20"},
+  {"id":"demo-bus-1","number_plate":"TN01BC9001","vehicle_type":"bus","owner_name":"Campus Transport Demo","department":"Transport","vehicle_model":"Ashok Leyland"},
+  {"id":"demo-bus-2","number_plate":"TN01BC9002","vehicle_type":"bus","owner_name":"Campus Transport Demo","department":"Transport","vehicle_model":"Tata Starbus"},
+  {"id":"demo-service-1","number_plate":"TN12DE4567","vehicle_type":"service","owner_name":"Demo Facilities Vendor","department":"Facilities","vehicle_model":"Tata Ace"}
+]
