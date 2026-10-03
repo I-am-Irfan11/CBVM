@@ -161,7 +161,7 @@ All backend variables are read from the repository-root .env regardless of worki
 | R2_PRESIGNED_URL_EXPIRY_SECONDS | Signed scan image link lifetime; 300 seconds by default |
 | SEED_OPERATIONAL_DATA | false by default; set true only to load fictional sample vehicles and operations |
 | RECONNECT_DELAY_SECONDS | 1 second initial capture reconnect delay; backoff is capped |
-| VITE_API_URL | http://127.0.0.1:8000; public frontend API origin |
+| VITE_API_URL | /api; public API base path the frontend calls (override with an absolute origin when the API is on a different hostname) |
 
 Change frontend settings before rebuilding/restarting Vite. UI timestamps are explicitly shown in IST. Source FPS and FRAME_SAMPLE_RATE are different: sampling reduces inference calls; it is not a hardware performance guarantee.
 
