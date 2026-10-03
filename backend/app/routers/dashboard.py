@@ -139,18 +139,6 @@ async def websocket_events(socket: WebSocket):
     if origin and origin not in socket.app.state.settings.cors_origins:
         await socket.close(code=1008)
         return
-    token = socket.cookies.get("gatelog_session")
-    if not token:
-        await socket.close(code=1008)
-        return
-    try:
-        user, _session = await run_in_threadpool(socket.app.state.auth.authenticate, token)
-        if user["role"] == "department_staff":
-            await socket.close(code=1008)
-            return
-    except HTTPException:
-        await socket.close(code=1008)
-        return
     await socket.accept()
     hub = socket.app.state.hub
     queue = hub.subscribe()

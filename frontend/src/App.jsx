@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Plus,
   Search,
@@ -8,10 +8,9 @@ import {
   History,
   RefreshCw,
 } from "lucide-react";
-import { api, setCsrfToken } from "./services/api";
+import { api } from "./services/api";
 import { useApi } from "./hooks/useApi";
 import { useLiveEvents } from "./hooks/useLiveEvents";
-import { supabase } from "./services/supabase";
 import Shell, { pages } from "./layouts/Shell";
 import Dashboard, { ActivityTable } from "./pages/Dashboard";
 import {
@@ -29,7 +28,6 @@ import {
 import VehicleForm, { vehicleTypes } from "./components/VehicleForm";
 import MovementForm from "./components/MovementForm";
 import DemoControls from "./components/DemoControls";
-import Login from "./components/Login";
 import OperationsPages from "./pages/OperationsPages";
 import ReviewForm from "./components/ReviewForm";
 
@@ -50,14 +48,12 @@ export default function App() {
   const [vehicleId, setVehicleId] = useState("");
   const [plateSearch, setPlateSearch] = useState("");
   const [pending, setPending] = useState(false);
-  const [user, setUser] = useState(undefined);
-  const [authError, setAuthError] = useState("");
-  const sessionRestore = useRef(null);
+  const user = { full_name: "Public access", role: "admin" };
   const [reviewItem, setReviewItem] = useState(null);
   const [visitorReviewId, setVisitorReviewId] = useState(null);
   const [visitorReviewPlate, setVisitorReviewPlate] = useState("");
   const refresh = useCallback(() => setRevision((value) => value + 1), []);
-  const liveStatus = useLiveEvents(refresh, Boolean(user));
+  const liveStatus = useLiveEvents(refresh, true);
   const dashboard = useApi("/dashboard", revision);
   const path =
     page === "registry"
@@ -79,38 +75,6 @@ export default function App() {
     [],
   );
   useEffect(() => {
-    let active = true;
-    if (!sessionRestore.current) {
-      sessionRestore.current = (async () => {
-        try {
-          const session = await api("/auth/me");
-          return { user: session.user, csrf: session.csrf_token };
-        } catch { /* A first visit has no GateLog session yet. */ }
-        const { data, error } = await supabase?.auth.getSession() || {};
-        if (error) throw error;
-        const accessToken = data?.session?.access_token;
-        if (!accessToken) return { user: null };
-        const result = await api("/auth/google", {
-          method: "POST",
-          body: { access_token: accessToken },
-        });
-        await supabase.auth.signOut();
-        return { user: result.user, csrf: result.csrf_token };
-      })().catch(async (error) => {
-        await supabase?.auth.signOut();
-        return { user: null, error: error.message || "Google sign-in could not be completed." };
-      });
-    }
-    sessionRestore.current.then((result) => {
-      if (!active) return;
-      if (result.csrf) setCsrfToken(result.csrf);
-      if (result.error) setAuthError(result.error);
-      setUser(result.user);
-      if (result.user) refresh();
-    });
-    return () => { active = false; };
-  }, []);
-  useEffect(() => {
     const change = () => {
       setPage(initialPage());
       setOffset(0);
@@ -128,25 +92,6 @@ export default function App() {
     location.hash = next;
     setOffset(0);
     if (id) setVehicleId(id);
-  }
-  async function logout() {
-    try {
-      await api("/auth/logout", { method: "POST" });
-    } catch { /* Access session may already have expired */ }
-    setCsrfToken("");
-    setUser(null);
-  }
-  function authenticated(nextUser) {
-    setUser(nextUser);
-    if (nextUser.role === "department_staff" && !["dashboard", "history", "reports"].includes(page)) {
-      setPage("dashboard");
-      location.hash = "dashboard";
-    }
-    if (nextUser.role === "security" && ["users", "audit", "purposes"].includes(page)) {
-      setPage("dashboard");
-      location.hash = "dashboard";
-    }
-    refresh();
   }
   async function saveVehicle(payload, id) {
     await api(id ? `/vehicles/${id}` : "/vehicles", {
@@ -255,8 +200,6 @@ export default function App() {
     users: ["User access", "Manage GateLog accounts and roles."],
     audit: ["Audit log", "Review administrative and manual changes."],
   };
-  if (user === undefined) return <main className="login-page"><p>Checking session…</p></main>;
-  if (!user) return <Login authError={authError} />;
   return (
     <>
       <a href="#main-content" className="skip-link">
@@ -267,8 +210,6 @@ export default function App() {
         navigate={navigate}
         status={liveStatus}
         dashboard={dashboard.data}
-        user={user}
-        logout={logout}
       >
         {page === "dashboard" ? (
           <DataState state={dashboard} retry={refresh}>

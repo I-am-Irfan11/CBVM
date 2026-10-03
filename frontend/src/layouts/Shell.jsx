@@ -25,12 +25,8 @@ export const pages = [
   ["users", "User access", ShieldCheck],
   ["audit", "Audit log", ShieldCheck],
 ];
-export default function Shell({ page, navigate, status, dashboard, user, logout, children }) {
-  const visiblePages = user?.role === "department_staff"
-    ? pages.filter(([id]) => ["dashboard", "history", "reports"].includes(id))
-    : user?.role === "security"
-      ? pages.filter(([id]) => !["users", "audit", "purposes"].includes(id))
-      : pages;
+export default function Shell({ page, navigate, status, dashboard, children }) {
+  const visiblePages = pages;
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -90,8 +86,6 @@ export default function Shell({ page, navigate, status, dashboard, user, logout,
             {status === "connected"
               ? "Live updates connected"
               : "Reconnecting live updates"}
-            <span className="account-label">{user?.full_name} · {user?.role?.replaceAll("_", " ")}</span>
-            <button className="button secondary small" onClick={logout}>Sign out</button>
           </div>
         </header>
         <main id="main-content">
