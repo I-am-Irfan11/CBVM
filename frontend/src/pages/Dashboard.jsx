@@ -170,7 +170,7 @@ export default function Dashboard({ data, navigate, notify, refresh }) {
           </div>
           <p className="camera-note">
             {data.mock_ai
-              ? "Simulated recognition is enabled. No physical camera is connected."
+              ? "Use the laptop camera demo below to capture a frame. Plate matching is simulated from the selected registered vehicle."
               : "Camera status updates when the capture worker receives frames."}
           </p>
         </Card>
