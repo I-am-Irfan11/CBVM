@@ -95,6 +95,39 @@ def test_signup_rejects_duplicates_and_short_passwords(app):
         assert short_password.status_code == 422
 
 
+def test_any_signed_in_role_can_register_vehicles(app):
+    from datetime import datetime, timezone
+
+    from fastapi.testclient import TestClient
+
+    from app.services.auth import password_hash
+
+    with TestClient(app) as anonymous:
+        assert anonymous.post(
+            "/vehicles",
+            json={"number_plate": "TN09NR0001", "vehicle_type": "staff", "owner_name": "Nobody"},
+        ).status_code == 401
+
+        app.state.db.users.insert_one({
+            "_id": "test-dept-creator", "username": "deptcreator", "email": "deptcreator@test.local",
+            "full_name": "Dept Creator", "role": "department_staff", "department": "Testing",
+            "active": True, "password_hash": password_hash("TestOnly-password-123!"),
+            "created_at": datetime.now(timezone.utc),
+        })
+        for identifier, plate in (("deptcreator", "TN09NR0002"),):
+            login = anonymous.post(
+                "/auth/login", json={"identifier": identifier, "password": "TestOnly-password-123!"},
+            )
+            assert login.status_code == 200
+            created = anonymous.post(
+                "/vehicles",
+                json={"number_plate": plate, "vehicle_type": "staff", "owner_name": "Dept Owner"},
+                headers={"X-CSRF-Token": login.json()["csrf_token"]},
+            )
+            assert created.status_code == 201, created.text
+            anonymous.post("/auth/logout", headers={"X-CSRF-Token": login.json()["csrf_token"]})
+
+
 def test_signup_cannot_grant_admin_and_is_throttled(app):
     from fastapi.testclient import TestClient
 

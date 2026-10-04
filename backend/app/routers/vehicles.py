@@ -13,7 +13,7 @@ router = APIRouter(prefix="/vehicles", tags=["Vehicles"])
 
 
 @router.post("", status_code=201)
-def create_vehicle(payload: VehicleCreate, ops=Depends(operations), user=Depends(administrator)):
+def create_vehicle(payload: VehicleCreate, ops=Depends(operations), user=Depends(current_user)):
     return ops.register(payload)
 
 
