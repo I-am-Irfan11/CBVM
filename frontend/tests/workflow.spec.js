@@ -1,14 +1,18 @@
 import { test, expect } from "@playwright/test";
 
+// The sign-in screen is a dummy entrance while DEMO_OPEN_ACCESS is enabled: it
+// checks no credentials, so the suite just passes through it.
+async function enterDemoConsole(page) {
+  await page.getByRole("button", { name: "Enter GateLog" }).click();
+}
+
 test("registry, entry, exit, history, review, and live dashboard", async ({
   page,
 }) => {
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
-  await page.getByLabel("Username or email").fill("admin");
-  await page.getByLabel("Password").fill("TestOnly-password-123!");
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await enterDemoConsole(page);
   await expect(
     page.getByRole("heading", { name: "Campus at a glance." }),
   ).toBeVisible();
@@ -66,9 +70,7 @@ test("registry, entry, exit, history, review, and live dashboard", async ({
 test("dashboard fits a mobile viewport", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  await page.getByLabel("Username or email").fill("admin");
-  await page.getByLabel("Password").fill("TestOnly-password-123!");
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await enterDemoConsole(page);
   await expect(
     page.getByRole("heading", { name: "Campus at a glance." }),
   ).toBeVisible();

@@ -7,6 +7,11 @@ from app.services.auth import user_public
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
+# Marks that the demo entrance has been passed. Not a credential; it only tells
+# /auth/me to report a signed-in demo identity. The frontend writes it with
+# document.cookie, so it has to stay a script-writable (non-HttpOnly) cookie.
+DEMO_COOKIE = "gatelog_demo"
+
 
 class GoogleSessionRequest(BaseModel):
     access_token: str = Field(min_length=20, max_length=8192)
@@ -85,14 +90,25 @@ async def google_session(payload: GoogleSessionRequest, request: Request, respon
 @router.get("/me")
 def me(request: Request, response: Response, user=Depends(current_user)):
     response.headers["Cache-Control"] = "no-store"
+    if request.app.state.settings.demo_open_access:
+        # Report "signed out" until the demo entrance has been passed, so the
+        # dummy sign-in screen still renders on a fresh visit.
+        if not request.cookies.get(DEMO_COOKIE):
+            return {"user": None, "csrf_token": None}
+        return {"user": user_public(user), "csrf_token": None}
     return {"user": user_public(user), "csrf_token": request.state.session["csrf"] if request.state.session else None}
 
 
 @router.post("/logout")
 def logout(request: Request, response: Response, user=Depends(current_user)):
+    settings = request.app.state.settings
+    if settings.demo_open_access:
+        # No server-side session exists in demo mode; drop the entrance marker.
+        response.delete_cookie(DEMO_COOKIE, path="/", secure=settings.cookie_secure, httponly=False, samesite="lax")
+        response.headers["Cache-Control"] = "no-store"
+        return {"ok": True}
     request.app.state.db.sessions.delete_one({"_id": request.state.session["_id"]})
     request.app.state.operations.audit("auth.logout", new={"_id": user["_id"]})
-    settings = request.app.state.settings
     response.delete_cookie("gatelog_session", path="/", secure=settings.cookie_secure, httponly=True, samesite="lax")
     response.headers["Cache-Control"] = "no-store"
     return {"ok": True}

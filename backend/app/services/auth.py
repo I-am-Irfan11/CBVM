@@ -31,6 +31,29 @@ def user_public(user):
     return {("id" if key == "_id" else key): user.get(key) for key in SAFE_USER_FIELDS}
 
 
+# Identity handed to every visitor while Settings.demo_open_access is enabled.
+# It is a throwaway placeholder, never persisted: the role is "admin" purely so
+# the demo can reach every page, and nothing here is trusted for authorisation.
+DEMO_USER_ID = "demo-open-access"
+
+
+def demo_user():
+    now = datetime.now(timezone.utc)
+    return {
+        "_id": DEMO_USER_ID,
+        "username": "demo",
+        "email": "demo@gatelog.local",
+        "full_name": "Demo Operator",
+        "role": "admin",
+        "department": None,
+        "active": True,
+        "auth_provider": "demo",
+        "created_at": now,
+        "updated_at": now,
+        "last_login_at": now,
+    }
+
+
 class AuthService:
     def __init__(self, db, settings):
         self.db, self.settings = db, settings

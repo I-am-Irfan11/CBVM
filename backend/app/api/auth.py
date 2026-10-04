@@ -3,10 +3,18 @@ from starlette.concurrency import run_in_threadpool
 import secrets
 
 from app.core.identity import actor
+from app.services.auth import demo_user
 
 
 async def current_user(request: Request):
     settings = request.app.state.settings
+    if settings.demo_open_access:
+        # Demo entrance: no credential, session or CSRF check is performed. Only
+        # reachable when DEMO_OPEN_ACCESS is explicitly enabled.
+        user = demo_user()
+        request.state.user, request.state.session = user, None
+        actor.set({"user_id": user["_id"], "role": user["role"]})
+        return user
     origin = request.headers.get("origin")
     if request.method not in ("GET", "HEAD", "OPTIONS"):
         if origin and origin not in settings.cors_origins:

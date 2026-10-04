@@ -47,6 +47,9 @@ class Settings(BaseSettings):
     r2_secret_access_key: str = ""
     r2_presigned_url_expiry_seconds: int = Field(default=300, ge=30, le=3600)
     enable_demo_reset: bool = False
+    # Demo bypass: serve every visitor a dummy entrance and skip all credential,
+    # session and CSRF checks. Never enable on a public deployment.
+    demo_open_access: bool = False
     reconnect_delay_seconds: float = Field(default=1, gt=0, le=60)
 
     @field_validator("campus_timezone")

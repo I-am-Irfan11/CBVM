@@ -146,12 +146,14 @@ async def websocket_events(socket: WebSocket):
     authorization = socket.headers.get("authorization", "")
     if authorization.startswith("Bearer "):
         token = authorization[7:]
+    demo = socket.app.state.settings.demo_open_access
     try:
-        if not token:
-            raise HTTPException(401, "Sign in required")
-        user, session = await run_in_threadpool(socket.app.state.auth.authenticate, token)
-        if user["role"] not in ("admin", "security"):
-            raise HTTPException(403, "Use scoped polling for department views")
+        if not demo:
+            if not token:
+                raise HTTPException(401, "Sign in required")
+            user, session = await run_in_threadpool(socket.app.state.auth.authenticate, token)
+            if user["role"] not in ("admin", "security"):
+                raise HTTPException(403, "Use scoped polling for department views")
     except HTTPException:
         await socket.close(code=1008)
         return
@@ -165,11 +167,12 @@ async def websocket_events(socket: WebSocket):
                 item = await asyncio.wait_for(queue.get(), timeout=20)
             except asyncio.TimeoutError:
                 item = {"type": "heartbeat", "data": {}}
-            try:
-                await run_in_threadpool(socket.app.state.auth.authenticate, token)
-            except HTTPException:
-                await socket.close(code=1008)
-                return
+            if not demo:
+                try:
+                    await run_in_threadpool(socket.app.state.auth.authenticate, token)
+                except HTTPException:
+                    await socket.close(code=1008)
+                    return
             await socket.send_json(item)
 
     sender = asyncio.create_task(send())
