@@ -419,61 +419,6 @@ tbody tr:hover {
   background: #fff0d9;
   color: #90620c;
 }
-.gate-diagram {
-  height: 147px;
-  margin: 0 24px 8px;
-  background: #edf3f7;
-  position: relative;
-  border-radius: 6px;
-  overflow: hidden;
-}
-.gate-label {
-  font-family: Consolas, monospace;
-  font-size: 8px;
-  letter-spacing: 2px;
-  color: #7b93a3;
-  text-align: center;
-  padding: 13px 0;
-  border-bottom: 1px dashed #b7cbd7;
-}
-.gate-road {
-  display: flex;
-  height: 110px;
-  width: 146px;
-  margin: auto;
-  background: #dce7ef;
-  border-inline: 5px solid white;
-}
-.gate-lane {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 50%;
-  gap: 8px;
-  color: #547e95;
-  font-size: 8px;
-  font-weight: 650;
-  letter-spacing: 2px;
-}
-.gate-lane:first-child {
-  border-right: 2px dashed white;
-  color: #138985;
-}
-.gate-barrier {
-  position: absolute;
-  top: 60px;
-  left: 12px;
-  height: 6px;
-  width: 64px;
-  transform: rotate(-35deg);
-  transform-origin: left center;
-  border: 1px solid white;
-  background: repeating-linear-gradient(90deg, #cb6e5e 0 10px, #fff 10px 20px);
-}
-.camera-list {
-  padding: 4px 24px;
-}
 .camera-row {
   display: flex;
   align-items: center;
@@ -493,11 +438,63 @@ tbody tr:hover {
   font-size: 9px;
   margin-top: 5px;
 }
-.camera-note {
-  padding: 15px 24px 23px;
-  font-size: 10px;
+.panel-body {
+  display: grid;
+  gap: 4px;
+  padding: 0 24px 24px;
+}
+.panel-body > p {
+  margin: 0 0 8px;
+  font-size: 12px;
   line-height: 1.7;
-  color: #7a92a1;
+  color: #617b8e;
+}
+.dashboard-section-heading {
+  margin: 30px 0 18px;
+  padding: 0 4px;
+}
+.dashboard-followup-grid {
+  align-items: start;
+}
+.ops-form {
+  display: grid;
+  gap: 16px;
+}
+.card .ops-form {
+  padding: 24px;
+}
+.ops-form label {
+  display: grid;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #36566a;
+}
+.ops-form .button {
+  justify-self: start;
+}
+.page-action {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+.report-filters {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+.tab-row {
+  display: flex;
+  gap: 10px;
+}
+.tab-row .button {
+  flex: 1;
+}
+.login-page {
+  min-height: 60vh;
+  display: grid;
+  place-items: center;
+  color: #607889;
+  font-size: 13px;
 }
 .demo-panel {
   display: flex;
@@ -814,19 +811,6 @@ footer {
   .overview-grid {
     grid-template-columns: 1fr;
   }
-  .gate-card {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-  }
-  .gate-card .section-heading {
-    grid-column: 1 / -1;
-  }
-  .gate-diagram {
-    grid-row: span 2;
-  }
-  .camera-note {
-    padding-top: 7px;
-  }
   .demo-panel {
     align-items: flex-start;
     flex-direction: column;
@@ -912,12 +896,6 @@ footer {
   .demo-controls .button {
     flex: 1;
   }
-  .gate-card {
-    display: block;
-  }
-  .gate-diagram {
-    height: 130px;
-  }
   .toolbar {
     flex-wrap: wrap;
     padding: 18px;
@@ -948,29 +926,198 @@ footer {
   }
 }
 /* Google account creation and sign-in */
-.signup-page { position: relative; min-height: 100vh; display: grid; place-items: center; overflow: hidden; padding: 32px 20px 74px; color: #f4f6f1; background: #102d3a; }
-.signup-page::before { position: absolute; inset: 0; content: ""; opacity: .28; background: linear-gradient(90deg, transparent calc(50% - 1px), #8fb1b533 calc(50% - 1px), #8fb1b533 50%, transparent 50%), repeating-linear-gradient(0deg, transparent 0 87px, #8fb1b51a 88px); mask-image: linear-gradient(transparent, #000 26%, #000 78%, transparent); pointer-events: none; }
-.signup-card { position: relative; width: min(100%, 470px); display: grid; gap: 20px; padding: clamp(28px, 6vw, 46px); background: #f8f8f3; color: #183544; border-top: 4px solid #d98d34; box-shadow: 0 28px 90px #071a2380; }
-.signup-mark { width: 48px; height: 48px; display: grid; place-items: center; color: #f5bd68; background: #173948; }
-.signup-card .eyebrow { color: #56808c; font-size: 11px; letter-spacing: .16em; }
-.signup-card h1 { margin: 0; font-size: clamp(32px, 7vw, 42px); letter-spacing: -.055em; line-height: 1.08; }
-.signup-copy { max-width: 355px; color: #627680; font-size: 15px; line-height: 1.65; }
-.signup-rule { height: 1px; background: #d7dfdc; }
-.signup-points { display: grid; gap: 12px; }
-.signup-points div { display: flex; align-items: center; gap: 10px; color: #536b75; font-size: 13px; }
-.signup-points svg { color: #118087; flex: none; }
-.google-signup { width: 100%; border: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 12px; min-height: 52px; padding: 0 16px; color: #fff; background: #173948; font-size: 14px; font-weight: 650; transition: background .15s, transform .15s; }
-.google-signup:disabled { cursor: wait; opacity: .75; }
-.google-signup:hover { background: #205263; transform: translateY(-1px); }
-.google-signup > svg { margin-left: auto; color: #f5bd68; }
-.google-g { width: 25px; height: 25px; display: grid; place-items: center; border-radius: 50%; color: #4285f4; background: white; font-size: 16px; font-weight: 750; }
-.signup-unavailable { display: grid; gap: 6px; padding: 14px 16px; border-left: 3px solid #d98d34; color: #627680; background: #eef1ed; font-size: 13px; line-height: 1.5; }
-.signup-unavailable strong { color: #183544; }
-.signup-footnote { color: #71818a; font-size: 12px; text-align: center; }
-.signup-rail { position: absolute; bottom: 28px; left: 50%; display: flex; align-items: center; gap: 12px; color: #a6bec2; font-size: 10px; letter-spacing: .17em; transform: translateX(-50%); white-space: nowrap; }
-.signup-rail i { width: 44px; height: 2px; background: #d98d34; }
-.demo-empty { grid-column: 1 / -1; color: #6b7c87; font-size: 13px; }
-.scan-preview { display: block; width: 100%; max-height: 260px; object-fit: contain; background: #102d3a; }
-@media (max-width: 520px) { .signup-page { padding-inline: 14px; } .signup-card { gap: 17px; } .signup-rail { font-size: 9px; gap: 8px; } }
-@media (prefers-reduced-motion: reduce) { .google-signup { transition: none; } .google-signup:hover { transform: none; } }
-.account-label { color: #52636f; font-size: 13px; }
+.signup-page {
+  position: relative;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: 32px 20px 74px;
+  color: #f4f6f1;
+  background: #102d3a;
+}
+.signup-page::before {
+  position: absolute;
+  inset: 0;
+  content: "";
+  opacity: 0.28;
+  background:
+    linear-gradient(
+      90deg,
+      transparent calc(50% - 1px),
+      #8fb1b533 calc(50% - 1px),
+      #8fb1b533 50%,
+      transparent 50%
+    ),
+    repeating-linear-gradient(0deg, transparent 0 87px, #8fb1b51a 88px);
+  mask-image: linear-gradient(transparent, #000 26%, #000 78%, transparent);
+  pointer-events: none;
+}
+.signup-card {
+  position: relative;
+  width: min(100%, 470px);
+  display: grid;
+  gap: 20px;
+  padding: clamp(28px, 6vw, 46px);
+  background: #f8f8f3;
+  color: #183544;
+  border-top: 4px solid #d98d34;
+  box-shadow: 0 28px 90px #071a2380;
+}
+.signup-mark {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  color: #f5bd68;
+  background: #173948;
+}
+.signup-card .eyebrow {
+  color: #56808c;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+}
+.signup-card h1 {
+  margin: 0;
+  font-size: clamp(32px, 7vw, 42px);
+  letter-spacing: -0.055em;
+  line-height: 1.08;
+}
+.signup-copy {
+  max-width: 355px;
+  color: #627680;
+  font-size: 15px;
+  line-height: 1.65;
+}
+.signup-rule {
+  height: 1px;
+  background: #d7dfdc;
+}
+.signup-points {
+  display: grid;
+  gap: 12px;
+}
+.signup-points div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #536b75;
+  font-size: 13px;
+}
+.signup-points svg {
+  color: #118087;
+  flex: none;
+}
+.google-signup {
+  width: 100%;
+  border: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 0 16px;
+  color: #fff;
+  background: #173948;
+  font-size: 14px;
+  font-weight: 650;
+  transition:
+    background 0.15s,
+    transform 0.15s;
+}
+.google-signup:disabled {
+  cursor: wait;
+  opacity: 0.75;
+}
+.google-signup:hover {
+  background: #205263;
+  transform: translateY(-1px);
+}
+.google-signup > svg {
+  margin-left: auto;
+  color: #f5bd68;
+}
+.google-g {
+  width: 25px;
+  height: 25px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #4285f4;
+  background: white;
+  font-size: 16px;
+  font-weight: 750;
+}
+.signup-unavailable {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border-left: 3px solid #d98d34;
+  color: #627680;
+  background: #eef1ed;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.signup-unavailable strong {
+  color: #183544;
+}
+.signup-footnote {
+  color: #71818a;
+  font-size: 12px;
+  text-align: center;
+}
+.signup-rail {
+  position: absolute;
+  bottom: 28px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #a6bec2;
+  font-size: 10px;
+  letter-spacing: 0.17em;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+.signup-rail i {
+  width: 44px;
+  height: 2px;
+  background: #d98d34;
+}
+.demo-empty {
+  grid-column: 1 / -1;
+  color: #6b7c87;
+  font-size: 13px;
+}
+.scan-preview {
+  display: block;
+  width: 100%;
+  max-height: 260px;
+  object-fit: contain;
+  background: #102d3a;
+}
+@media (max-width: 520px) {
+  .signup-page {
+    padding-inline: 14px;
+  }
+  .signup-card {
+    gap: 17px;
+  }
+  .signup-rail {
+    font-size: 9px;
+    gap: 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .google-signup {
+    transition: none;
+  }
+  .google-signup:hover {
+    transform: none;
+  }
+}
+.account-label {
+  color: #52636f;
+  font-size: 13px;
+}

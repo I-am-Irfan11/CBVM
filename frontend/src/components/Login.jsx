@@ -100,7 +100,7 @@ export default function Login({ authError = "", onAuthenticated }) {
         </p>
         <div className="signup-rule" />
         <div
-          className="toolbar"
+          className="tab-row"
           role="tablist"
           aria-label="Sign in or create account"
         >
