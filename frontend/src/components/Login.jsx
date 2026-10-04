@@ -39,10 +39,18 @@ export default function Login({ authError = "", onAuthenticated }) {
     event.preventDefault();
     setPending(true);
     setError("");
+    const trimmed = identifier.trim();
+    if (trimmed.includes(" ") && !trimmed.includes("@")) {
+      setError(
+        "That looks like a full name. Sign in with the username or email address you registered with instead.",
+      );
+      setPending(false);
+      return;
+    }
     try {
       const result = await api("/auth/login", {
         method: "POST",
-        body: { identifier: identifier.trim(), password },
+        body: { identifier: trimmed, password },
       });
       authenticated(result);
     } catch (requestError) {
@@ -138,7 +146,12 @@ export default function Login({ authError = "", onAuthenticated }) {
                 onChange={(event) => setIdentifier(event.target.value)}
                 required
                 autoComplete="username"
+                placeholder="e.g. irfan_desk01 or you@campus.edu"
               />
+              <small className="field-hint">
+                Use the username or email you registered with — not your full
+                name.
+              </small>
             </label>
             <label>
               Password
@@ -173,7 +186,12 @@ export default function Login({ authError = "", onAuthenticated }) {
                 required
                 minLength={3}
                 autoComplete="username"
+                placeholder="e.g. irfan_desk01"
               />
+              <small className="field-hint">
+                Letters, numbers, dot, dash and underscore only — no spaces. You
+                will sign in with this.
+              </small>
             </label>
             <label>
               Email
