@@ -6,6 +6,9 @@ let csrfToken = "";
 export function setCsrfToken(value) {
   csrfToken = value || "";
 }
+export function getCsrfToken() {
+  return csrfToken;
+}
 export async function api(path, options = {}) {
   const response = await fetch(`${API_URL}${path}`, {
     ...options,

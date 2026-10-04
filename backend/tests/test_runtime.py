@@ -6,7 +6,6 @@ from starlette.websockets import WebSocketDisconnect
 
 from app.core.config import Settings
 from app.main import create_app
-from app.services.operations import utcnow
 
 
 def test_runtime_never_falls_back_to_memory():

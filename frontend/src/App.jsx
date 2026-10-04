@@ -532,8 +532,12 @@ export default function App() {
                     <ActivityTable rows={view.data || []} navigate={navigate} />
                   </DataState>
                 </Card>
-                {dashboard.data?.mock_ai ? (
-                  <DemoControls notify={notify} refresh={refresh} />
+                {dashboard.data ? (
+                  <DemoControls
+                    notify={notify}
+                    refresh={refresh}
+                    mockAi={dashboard.data.mock_ai}
+                  />
                 ) : null}
               </>
             ) : null}

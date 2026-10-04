@@ -7,14 +7,13 @@ from uuid import uuid4
 from zoneinfo import ZoneInfo
 import re
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError
 from starlette.concurrency import run_in_threadpool
 
 from app.api.auth import administrator, current_user, operator, restricted_vehicle, vehicle_scope
-from app.core.identity import actor
 from app.database.connection import public
 from app.schemas.campus import (
     BusInput, CameraInput, PurposeInput, RetentionInput, ReviewAction, UserInput, VisitorInput,

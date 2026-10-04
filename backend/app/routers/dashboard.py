@@ -8,7 +8,7 @@ from pymongo import ReturnDocument
 from pymongo.errors import PyMongoError
 from starlette.concurrency import run_in_threadpool
 
-from app.api.auth import administrator, current_user, operator
+from app.api.auth import current_user, operator
 from app.api.dependencies import operations
 from app.database.connection import public
 from app.schemas.vehicle import MockRequest

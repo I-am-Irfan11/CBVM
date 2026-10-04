@@ -246,7 +246,7 @@ export default function Dashboard({ data, navigate, notify, refresh }) {
           </div>
         </Card>
       </div>
-      {data.mock_ai ? <DemoControls notify={notify} refresh={refresh} /> : null}
+      <DemoControls notify={notify} refresh={refresh} mockAi={data.mock_ai} />
     </>
   );
 }
