@@ -488,19 +488,80 @@ tbody tr:hover {
   flex-wrap: wrap;
   justify-content: flex-start;
 }
-.tab-row {
-  display: flex;
-  gap: 10px;
-}
-.tab-row .button {
-  flex: 1;
-}
 .login-page {
   min-height: 60vh;
   display: grid;
   place-items: center;
   color: #607889;
   font-size: 13px;
+}
+.login-screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px 20px;
+  background: #102d3a;
+}
+.login-card {
+  width: min(100%, 420px);
+  display: grid;
+  gap: 16px;
+  padding: clamp(28px, 6vw, 40px);
+  background: #f8f8f3;
+  color: #183544;
+  border-top: 4px solid #d98d34;
+  box-shadow: 0 28px 90px #071a2380;
+}
+.login-card h1 {
+  margin: 0;
+  font-size: 28px;
+  letter-spacing: -0.5px;
+}
+.login-sub {
+  margin: 0;
+  color: #627680;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.login-form {
+  display: grid;
+  gap: 16px;
+}
+.login-form label {
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #36566a;
+}
+.login-submit {
+  width: 100%;
+  min-height: 48px;
+}
+.login-error {
+  padding: 12px 14px;
+  border-left: 3px solid #d98d34;
+  background: #eef1ed;
+  color: #627680;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.login-switch {
+  margin: 0;
+  text-align: center;
+  color: #71818a;
+  font-size: 13px;
+}
+.login-switch button {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: #087f83;
+  font-weight: 650;
+  font-size: 13px;
+}
+.login-switch button:hover {
+  text-decoration: underline;
 }
 .demo-panel {
   display: flex;
@@ -931,165 +992,13 @@ footer {
     scroll-behavior: auto !important;
   }
 }
-/* Google account creation and sign-in */
-.signup-page {
-  position: relative;
-  min-height: 100vh;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  padding: 32px 20px 74px;
-  color: #f4f6f1;
-  background: #102d3a;
-}
-.signup-page::before {
-  position: absolute;
-  inset: 0;
-  content: "";
-  opacity: 0.28;
-  background:
-    linear-gradient(
-      90deg,
-      transparent calc(50% - 1px),
-      #8fb1b533 calc(50% - 1px),
-      #8fb1b533 50%,
-      transparent 50%
-    ),
-    repeating-linear-gradient(0deg, transparent 0 87px, #8fb1b51a 88px);
-  mask-image: linear-gradient(transparent, #000 26%, #000 78%, transparent);
-  pointer-events: none;
-}
-.signup-card {
-  position: relative;
-  width: min(100%, 470px);
-  display: grid;
-  gap: 20px;
-  padding: clamp(28px, 6vw, 46px);
-  background: #f8f8f3;
-  color: #183544;
-  border-top: 4px solid #d98d34;
-  box-shadow: 0 28px 90px #071a2380;
-}
-.signup-mark {
+.login-mark {
   width: 48px;
   height: 48px;
   display: grid;
   place-items: center;
   color: #f5bd68;
   background: #173948;
-}
-.signup-card .eyebrow {
-  color: #56808c;
-  font-size: 11px;
-  letter-spacing: 0.16em;
-}
-.signup-card h1 {
-  margin: 0;
-  font-size: clamp(32px, 7vw, 42px);
-  letter-spacing: -0.055em;
-  line-height: 1.08;
-}
-.signup-copy {
-  max-width: 355px;
-  color: #627680;
-  font-size: 15px;
-  line-height: 1.65;
-}
-.signup-rule {
-  height: 1px;
-  background: #d7dfdc;
-}
-.signup-points {
-  display: grid;
-  gap: 12px;
-}
-.signup-points div {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: #536b75;
-  font-size: 13px;
-}
-.signup-points svg {
-  color: #118087;
-  flex: none;
-}
-.google-signup {
-  width: 100%;
-  border: 0;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  min-height: 52px;
-  padding: 0 16px;
-  color: #fff;
-  background: #173948;
-  font-size: 14px;
-  font-weight: 650;
-  transition:
-    background 0.15s,
-    transform 0.15s;
-}
-.google-signup:disabled {
-  cursor: wait;
-  opacity: 0.75;
-}
-.google-signup:hover {
-  background: #205263;
-  transform: translateY(-1px);
-}
-.google-signup > svg {
-  margin-left: auto;
-  color: #f5bd68;
-}
-.google-g {
-  width: 25px;
-  height: 25px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  color: #4285f4;
-  background: white;
-  font-size: 16px;
-  font-weight: 750;
-}
-.signup-unavailable {
-  display: grid;
-  gap: 6px;
-  padding: 14px 16px;
-  border-left: 3px solid #d98d34;
-  color: #627680;
-  background: #eef1ed;
-  font-size: 13px;
-  line-height: 1.5;
-}
-.signup-unavailable strong {
-  color: #183544;
-}
-.signup-footnote {
-  color: #71818a;
-  font-size: 12px;
-  text-align: center;
-}
-.signup-rail {
-  position: absolute;
-  bottom: 28px;
-  left: 50%;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: #a6bec2;
-  font-size: 10px;
-  letter-spacing: 0.17em;
-  transform: translateX(-50%);
-  white-space: nowrap;
-}
-.signup-rail i {
-  width: 44px;
-  height: 2px;
-  background: #d98d34;
 }
 .demo-empty {
   grid-column: 1 / -1;
@@ -1103,24 +1012,9 @@ footer {
   object-fit: contain;
   background: #102d3a;
 }
-@media (max-width: 520px) {
-  .signup-page {
-    padding-inline: 14px;
-  }
-  .signup-card {
-    gap: 17px;
-  }
-  .signup-rail {
-    font-size: 9px;
-    gap: 8px;
-  }
-}
 @media (prefers-reduced-motion: reduce) {
-  .google-signup {
+  .login-submit {
     transition: none;
-  }
-  .google-signup:hover {
-    transform: none;
   }
 }
 .account-label {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Plus,
   Search,
@@ -11,7 +11,6 @@ import {
 import { api, setCsrfToken } from "./services/api";
 import { useApi } from "./hooks/useApi";
 import { useLiveEvents } from "./hooks/useLiveEvents";
-import { supabase } from "./services/supabase";
 import Shell, { pages } from "./layouts/Shell";
 import Dashboard, { ActivityTable } from "./pages/Dashboard";
 import {
@@ -51,8 +50,6 @@ export default function App() {
   const [plateSearch, setPlateSearch] = useState("");
   const [pending, setPending] = useState(false);
   const [user, setUser] = useState(undefined);
-  const [authError, setAuthError] = useState("");
-  const sessionRestore = useRef(null);
   const [reviewItem, setReviewItem] = useState(null);
   const [visitorReviewId, setVisitorReviewId] = useState(null);
   const [visitorReviewPlate, setVisitorReviewPlate] = useState("");
@@ -87,39 +84,16 @@ export default function App() {
   );
   useEffect(() => {
     let active = true;
-    if (!sessionRestore.current) {
-      sessionRestore.current = (async () => {
-        try {
-          const session = await api("/auth/me");
-          return { user: session.user, csrf: session.csrf_token };
-        } catch {
-          /* A first visit has no GateLog session yet. */
-        }
-        const { data, error } = (await supabase?.auth.getSession()) || {};
-        if (error) throw error;
-        const accessToken = data?.session?.access_token;
-        if (!accessToken) return { user: null };
-        const result = await api("/auth/google", {
-          method: "POST",
-          body: { access_token: accessToken },
-        });
-        await supabase.auth.signOut();
-        return { user: result.user, csrf: result.csrf_token };
-      })().catch(async (error) => {
-        await supabase?.auth.signOut();
-        return {
-          user: null,
-          error: error.message || "Google sign-in could not be completed.",
-        };
+    api("/auth/me")
+      .then((session) => {
+        if (!active) return;
+        if (session.csrf_token) setCsrfToken(session.csrf_token);
+        setUser(session.user);
+        refresh();
+      })
+      .catch(() => {
+        if (active) setUser(null);
       });
-    }
-    sessionRestore.current.then((result) => {
-      if (!active) return;
-      if (result.csrf) setCsrfToken(result.csrf);
-      if (result.error) setAuthError(result.error);
-      setUser(result.user);
-      if (result.user) refresh();
-    });
     return () => {
       active = false;
     };
@@ -301,8 +275,7 @@ export default function App() {
         <p>Checking session…</p>
       </main>
     );
-  if (!user)
-    return <Login authError={authError} onAuthenticated={authenticated} />;
+  if (!user) return <Login onAuthenticated={authenticated} />;
   return (
     <>
       <a href="#main-content" className="skip-link">

@@ -145,7 +145,7 @@ def test_signup_cannot_grant_admin_and_is_throttled(app):
         assert created.json()["user"]["role"] == "security"
         assert app.state.db.users.find_one({"username": "noroot"})["role"] == "security"
 
-        for index in range(5):
+        for index in range(10):
             response = anonymous.post(
                 "/auth/signup",
                 json={

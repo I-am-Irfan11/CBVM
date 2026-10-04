@@ -12,7 +12,6 @@
     "format:check": "prettier --check src tests *.js index.html package.json"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.117.2",
     "lucide-react": "^0.468.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

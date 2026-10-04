@@ -67,7 +67,7 @@ class AuthService:
         now = datetime.now(timezone.utc)
         key = hashlib.sha256(f"signup:{client_id}".encode()).hexdigest()
         attempt = self.db.login_attempts.find_one({"_id": key})
-        if attempt and attempt["expires_at"] > now and attempt["count"] >= 5:
+        if attempt and attempt["expires_at"] > now and attempt["count"] >= 10:
             raise HTTPException(429, "Too many sign-up attempts. Try again in an hour.")
 
         def rejected(detail, status=409):
