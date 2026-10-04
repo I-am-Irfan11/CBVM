@@ -45,9 +45,9 @@ Use the virtual environment's Python directly; activation is optional. Avoid ove
 
 Install Python 3.10+ and Node.js 22+, then run `bash scripts/setup.sh`. Start the backend and frontend in separate terminals with `bash scripts/start-backend.sh` and `bash scripts/start-frontend.sh`. `bash scripts/seed-demo.sh` loads optional sample records into persistent MongoDB. `bash scripts/test.sh` runs the backend suite and frontend production build. These scripts use paths relative to the repository.
 
-## Temporary public access
+## Authentication and roles
 
-Authentication is disabled. Every visitor can read, create, edit, and delete vehicle, visitor, movement, scan, and administrative records through the public app and API. Do not use this deployment with real or confidential campus records until authentication is restored. The frontend API remains same-origin at `/api`.
+Sign in with your GateLog account (username or email plus a GateLog password of at least 12 characters) or create one from the sign-up screen. New self-registered accounts always receive the security role; the first administrator is created with `scripts/create_admin.py` and administrators manage roles from User access. Google sign-in through Supabase Auth is offered on the sign-in screen only when the deployment configures `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and an account allowlist; GateLog verifies the Supabase access token on the server and stores no Google password. The backend issues a short-lived, HttpOnly session cookie and enforces CSRF checks for writes. The frontend API remains same-origin at `/api`.
 
 Vehicle registry, plate readings, movement history, review decisions and audit records belong in MongoDB Atlas (`DATABASE_MODE=mongodb`). Original uploaded ANPR images can be stored in a private Cloudflare R2 bucket. Create a bucket-scoped R2 API token and set `R2_ENDPOINT_URL`, `R2_BUCKET`, `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY`. GateLog stores only the private object key beside the detection record; an operator can request a short-lived signed read URL from `/anpr/scans/{object_key}`. The upload is skipped when R2 is not configured. Add an R2 lifecycle rule for the `scans/` prefix matching your retention policy (90 days by default).
 
@@ -210,6 +210,10 @@ For continuous video set RUN_VIDEO_WORKER=true, choose VIDEO_SOURCE, configure t
 | GET | /reviews | Pending uncertain/unknown detections |
 | POST | /reviews/{id}/resolve | Confirm/correct or reject a reading with audit record |
 | POST | /reviews/{id}/dismiss | Dismiss without recording a movement |
+| POST | /auth/login /auth/signup | GateLog credential sign-in / self-registration (security role) |
+| GET | /auth/config /auth/me | Auth setup status / signed-in identity and CSRF token |
+| POST | /auth/google | Exchange a verified Supabase Google session for a GateLog session |
+| POST | /auth/logout | Sign out of GateLog |
 | GET | /health | Database health and persistence mode |
 | WS | /ws/events | Live notifications and heartbeat |
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Plus,
   Search,
@@ -8,9 +8,10 @@ import {
   History,
   RefreshCw,
 } from "lucide-react";
-import { api } from "./services/api";
+import { api, setCsrfToken } from "./services/api";
 import { useApi } from "./hooks/useApi";
 import { useLiveEvents } from "./hooks/useLiveEvents";
+import { supabase } from "./services/supabase";
 import Shell, { pages } from "./layouts/Shell";
 import Dashboard, { ActivityTable } from "./pages/Dashboard";
 import {
@@ -28,6 +29,7 @@ import {
 import VehicleForm, { vehicleTypes } from "./components/VehicleForm";
 import MovementForm from "./components/MovementForm";
 import DemoControls from "./components/DemoControls";
+import Login from "./components/Login";
 import OperationsPages from "./pages/OperationsPages";
 import ReviewForm from "./components/ReviewForm";
 
@@ -48,12 +50,14 @@ export default function App() {
   const [vehicleId, setVehicleId] = useState("");
   const [plateSearch, setPlateSearch] = useState("");
   const [pending, setPending] = useState(false);
-  const user = { full_name: "Public access", role: "admin" };
+  const [user, setUser] = useState(undefined);
+  const [authError, setAuthError] = useState("");
+  const sessionRestore = useRef(null);
   const [reviewItem, setReviewItem] = useState(null);
   const [visitorReviewId, setVisitorReviewId] = useState(null);
   const [visitorReviewPlate, setVisitorReviewPlate] = useState("");
   const refresh = useCallback(() => setRevision((value) => value + 1), []);
-  const liveStatus = useLiveEvents(refresh, true);
+  const liveStatus = useLiveEvents(refresh, Boolean(user));
   const dashboard = useApi("/dashboard", revision);
   const path =
     page === "registry"
@@ -66,14 +70,60 @@ export default function App() {
             ? "/activity?limit=100"
             : page === "reviews"
               ? `/reviews?limit=25&offset=${offset}`
-              : ({ visitors: "/visitors", buses: "/buses", reports: "/analytics?days=30",
-                  cameras: "/cameras", transport: "/transport/routes", purposes: "/purposes?include_inactive=true",
-                  users: "/users", audit: "/audit" }[page] || null);
+              : {
+                  visitors: "/visitors",
+                  buses: "/buses",
+                  reports: "/analytics?days=30",
+                  cameras: "/cameras",
+                  transport: "/transport/routes",
+                  purposes: "/purposes?include_inactive=true",
+                  users: "/users",
+                  audit: "/audit",
+                }[page] || null;
   const view = useApi(path, revision);
   const notify = useCallback(
     (text, error = false) => setNotification({ text, error }),
     [],
   );
+  useEffect(() => {
+    let active = true;
+    if (!sessionRestore.current) {
+      sessionRestore.current = (async () => {
+        try {
+          const session = await api("/auth/me");
+          return { user: session.user, csrf: session.csrf_token };
+        } catch {
+          /* A first visit has no GateLog session yet. */
+        }
+        const { data, error } = (await supabase?.auth.getSession()) || {};
+        if (error) throw error;
+        const accessToken = data?.session?.access_token;
+        if (!accessToken) return { user: null };
+        const result = await api("/auth/google", {
+          method: "POST",
+          body: { access_token: accessToken },
+        });
+        await supabase.auth.signOut();
+        return { user: result.user, csrf: result.csrf_token };
+      })().catch(async (error) => {
+        await supabase?.auth.signOut();
+        return {
+          user: null,
+          error: error.message || "Google sign-in could not be completed.",
+        };
+      });
+    }
+    sessionRestore.current.then((result) => {
+      if (!active) return;
+      if (result.csrf) setCsrfToken(result.csrf);
+      if (result.error) setAuthError(result.error);
+      setUser(result.user);
+      if (result.user) refresh();
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
   useEffect(() => {
     const change = () => {
       setPage(initialPage());
@@ -92,6 +142,33 @@ export default function App() {
     location.hash = next;
     setOffset(0);
     if (id) setVehicleId(id);
+  }
+  function authenticated(nextUser) {
+    setUser(nextUser);
+    if (
+      nextUser.role === "department_staff" &&
+      !["dashboard", "history", "reports"].includes(page)
+    ) {
+      setPage("dashboard");
+      location.hash = "dashboard";
+    }
+    if (
+      nextUser.role === "security" &&
+      ["users", "audit", "purposes"].includes(page)
+    ) {
+      setPage("dashboard");
+      location.hash = "dashboard";
+    }
+    refresh();
+  }
+  async function logout() {
+    try {
+      await api("/auth/logout", { method: "POST" });
+    } catch {
+      /* Access session may already have expired */
+    }
+    setCsrfToken("");
+    setUser(null);
   }
   async function saveVehicle(payload, id) {
     await api(id ? `/vehicles/${id}` : "/vehicles", {
@@ -191,15 +268,41 @@ export default function App() {
       "Review queue",
       "Inspect uncertain readings before taking action.",
     ],
-    visitors: ["Visitor register", "Record unknown vehicles and who they are visiting."],
-    buses: ["Bus operations", "Connect registered campus buses to route references and trips."],
-    reports: ["Movement reports", "Explore real campus traffic and export filtered records."],
-    cameras: ["Camera health", "See the last frame received from each gate source."],
-    transport: ["HITS transport references", "Historical route identifiers from the official transport page."],
-    purposes: ["Trip purposes", "Manage the reasons captured with campus movements."],
+    visitors: [
+      "Visitor register",
+      "Record unknown vehicles and who they are visiting.",
+    ],
+    buses: [
+      "Bus operations",
+      "Connect registered campus buses to route references and trips.",
+    ],
+    reports: [
+      "Movement reports",
+      "Explore real campus traffic and export filtered records.",
+    ],
+    cameras: [
+      "Camera health",
+      "See the last frame received from each gate source.",
+    ],
+    transport: [
+      "HITS transport references",
+      "Historical route identifiers from the official transport page.",
+    ],
+    purposes: [
+      "Trip purposes",
+      "Manage the reasons captured with campus movements.",
+    ],
     users: ["User access", "Manage GateLog accounts and roles."],
     audit: ["Audit log", "Review administrative and manual changes."],
   };
+  if (user === undefined)
+    return (
+      <main className="login-page">
+        <p>Checking session…</p>
+      </main>
+    );
+  if (!user)
+    return <Login authError={authError} onAuthenticated={authenticated} />;
   return (
     <>
       <a href="#main-content" className="skip-link">
@@ -210,6 +313,8 @@ export default function App() {
         navigate={navigate}
         status={liveStatus}
         dashboard={dashboard.data}
+        user={user}
+        logout={logout}
       >
         {page === "dashboard" ? (
           <DataState state={dashboard} retry={refresh}>
@@ -508,9 +613,32 @@ export default function App() {
                           label: "Action",
                           render: (row) => (
                             <div className="row-actions">
-                              <button className="button small" disabled={pending} onClick={() => setReviewItem(row)}>Confirm / correct</button>
-                              {row.reason === "Unregistered vehicle" ? <button className="button secondary small" onClick={() => {setVisitorReviewId(row.id);setVisitorReviewPlate(row.plate||"");navigate("visitors");}}>Register visitor</button> : null}
-                              <button className="button secondary small" disabled={pending} onClick={() => dismissReview(row.id)}>Reject</button>
+                              <button
+                                className="button small"
+                                disabled={pending}
+                                onClick={() => setReviewItem(row)}
+                              >
+                                Confirm / correct
+                              </button>
+                              {row.reason === "Unregistered vehicle" ? (
+                                <button
+                                  className="button secondary small"
+                                  onClick={() => {
+                                    setVisitorReviewId(row.id);
+                                    setVisitorReviewPlate(row.plate || "");
+                                    navigate("visitors");
+                                  }}
+                                >
+                                  Register visitor
+                                </button>
+                              ) : null}
+                              <button
+                                className="button secondary small"
+                                disabled={pending}
+                                onClick={() => dismissReview(row.id)}
+                              >
+                                Reject
+                              </button>
                             </div>
                           ),
                         },
@@ -525,16 +653,36 @@ export default function App() {
                 </Card>
               </>
             ) : null}
-            {headings[page] && !["registry", "inside", "history", "activity", "reviews"].includes(page) ? (
-              <OperationsPages page={page} state={view} user={user} notify={notify} refresh={refresh}
-                reviewId={visitorReviewId} reviewPlate={visitorReviewPlate}
-                clearReviewId={() => {setVisitorReviewId(null);setVisitorReviewPlate("");}} />
+            {headings[page] &&
+            !["registry", "inside", "history", "activity", "reviews"].includes(
+              page,
+            ) ? (
+              <OperationsPages
+                page={page}
+                state={view}
+                user={user}
+                notify={notify}
+                refresh={refresh}
+                reviewId={visitorReviewId}
+                reviewPlate={visitorReviewPlate}
+                clearReviewId={() => {
+                  setVisitorReviewId(null);
+                  setVisitorReviewPlate("");
+                }}
+              />
             ) : null}
           </>
         )}
       </Shell>
       <Notification item={notification} dismiss={() => setNotification(null)} />
-      {reviewItem ? <ReviewForm review={reviewItem} close={() => setReviewItem(null)} notify={notify} refresh={refresh} /> : null}
+      {reviewItem ? (
+        <ReviewForm
+          review={reviewItem}
+          close={() => setReviewItem(null)}
+          notify={notify}
+          refresh={refresh}
+        />
+      ) : null}
       {form ? (
         <VehicleForm
           vehicle={form.id ? form : null}

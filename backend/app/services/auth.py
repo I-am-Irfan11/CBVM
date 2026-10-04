@@ -57,6 +57,58 @@ class AuthService:
         token, csrf, max_age = self.create_session(user)
         return {"access_token": token, "csrf_token": csrf, "max_age": max_age, "user": user_public(user)}
 
+    def signup(self, username, email, full_name, password, department, client_id):
+        """Self-registration for local GateLog accounts.
+
+        New accounts always receive the security role; administrators are
+        created with scripts/create_admin.py or promoted by an existing
+        administrator. Never accepts a caller-supplied role.
+        """
+        now = datetime.now(timezone.utc)
+        key = hashlib.sha256(f"signup:{client_id}".encode()).hexdigest()
+        attempt = self.db.login_attempts.find_one({"_id": key})
+        if attempt and attempt["expires_at"] > now and attempt["count"] >= 5:
+            raise HTTPException(429, "Too many sign-up attempts. Try again in an hour.")
+
+        def rejected(detail, status=409):
+            self.db.login_attempts.update_one(
+                {"_id": key},
+                {"$inc": {"count": 1}, "$set": {"expires_at": now + timedelta(hours=1)}},
+                upsert=True,
+            )
+            raise HTTPException(status, detail)
+
+        username = (username or "").strip().lower()
+        email = (email or "").strip().lower()
+        full_name = (full_name or "").strip()
+        if not full_name:
+            rejected("Enter your full name", 422)
+        if len(password or "") < 12:
+            rejected("Choose a GateLog password of at least 12 characters", 422)
+        if self.db.users.find_one({"$or": [{"username": username}, {"email": email}]}):
+            rejected("Username or email already exists")
+        user = {
+            "_id": str(uuid4()),
+            "username": username,
+            "email": email,
+            "full_name": full_name[:100],
+            "role": "security",
+            "department": (department or "").strip() or None,
+            "active": True,
+            "auth_provider": "local",
+            "password_hash": password_hash(password),
+            "created_at": now,
+            "updated_at": now,
+            "last_login_at": now,
+        }
+        try:
+            self.db.users.insert_one(user)
+        except DuplicateKeyError:
+            rejected("Username or email already exists")
+        self.db.login_attempts.delete_one({"_id": key})
+        token, csrf, max_age = self.create_session(user)
+        return {"access_token": token, "csrf_token": csrf, "max_age": max_age, "user": user_public(user)}
+
     @staticmethod
     def _emails(value):
         return {item.strip().lower() for item in value.split(",") if item.strip()}

@@ -17,6 +17,14 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=1, max_length=256)
 
 
+class SignupRequest(BaseModel):
+    username: str = Field(min_length=3, max_length=80, pattern=r"^[a-zA-Z0-9_.-]+$")
+    email: str = Field(min_length=3, max_length=254, pattern=r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+    full_name: str = Field(min_length=1, max_length=100)
+    password: str = Field(min_length=12, max_length=256)
+    department: str | None = Field(default=None, max_length=100)
+
+
 @router.post("/login")
 async def login(payload: LoginRequest, request: Request, response: Response):
     settings = request.app.state.settings
@@ -24,6 +32,20 @@ async def login(payload: LoginRequest, request: Request, response: Response):
         raise HTTPException(403, "Origin is not allowed")
     result = await run_in_threadpool(request.app.state.auth.login, payload.identifier, payload.password,
                                     request.client.host if request.client else "unknown")
+    response.set_cookie("gatelog_session", result["access_token"], max_age=result.pop("max_age"),
+                        path="/", secure=settings.cookie_secure, httponly=True, samesite="lax")
+    response.headers["Cache-Control"] = "no-store"
+    return result
+
+
+@router.post("/signup", status_code=201)
+async def signup(payload: SignupRequest, request: Request, response: Response):
+    settings = request.app.state.settings
+    if request.headers.get("origin") and request.headers["origin"] not in settings.cors_origins:
+        raise HTTPException(403, "Origin is not allowed")
+    result = await run_in_threadpool(request.app.state.auth.signup, payload.username, payload.email,
+                                     payload.full_name, payload.password, payload.department,
+                                     request.client.host if request.client else "unknown")
     response.set_cookie("gatelog_session", result["access_token"], max_age=result.pop("max_age"),
                         path="/", secure=settings.cookie_secure, httponly=True, samesite="lax")
     response.headers["Cache-Control"] = "no-store"
