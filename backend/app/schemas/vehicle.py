@@ -30,7 +30,7 @@ class VehicleCreate(BaseModel):
 class Movement(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     camera_id: str = Field(default="main-gate-in", min_length=1, max_length=80)
-    purpose: str = Field(default="Campus visit", min_length=1, max_length=120)
+    purpose: str = Field(default="Campus visit", min_length=1, max_length=240)
     custom_purpose: str | None = Field(default=None, max_length=240)
     tracking_id: str | None = Field(default=None, min_length=1, max_length=100)
     event_id: str | None = Field(default=None, min_length=1, max_length=100)

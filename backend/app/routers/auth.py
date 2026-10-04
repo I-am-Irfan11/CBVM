@@ -12,6 +12,24 @@ class GoogleSessionRequest(BaseModel):
     access_token: str = Field(min_length=20, max_length=8192)
 
 
+class LoginRequest(BaseModel):
+    identifier: str = Field(min_length=1, max_length=254)
+    password: str = Field(min_length=1, max_length=256)
+
+
+@router.post("/login")
+async def login(payload: LoginRequest, request: Request, response: Response):
+    settings = request.app.state.settings
+    if request.headers.get("origin") and request.headers["origin"] not in settings.cors_origins:
+        raise HTTPException(403, "Origin is not allowed")
+    result = await run_in_threadpool(request.app.state.auth.login, payload.identifier, payload.password,
+                                    request.client.host if request.client else "unknown")
+    response.set_cookie("gatelog_session", result["access_token"], max_age=result.pop("max_age"),
+                        path="/", secure=settings.cookie_secure, httponly=True, samesite="lax")
+    response.headers["Cache-Control"] = "no-store"
+    return result
+
+
 @router.get("/config")
 def config(request: Request):
     settings = request.app.state.settings

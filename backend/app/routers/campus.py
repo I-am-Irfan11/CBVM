@@ -4,6 +4,8 @@ import csv
 import io
 from datetime import date, datetime, time as day_time, timedelta, timezone
 from uuid import uuid4
+from zoneinfo import ZoneInfo
+import re
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.responses import StreamingResponse
@@ -18,7 +20,7 @@ from app.schemas.campus import (
     BusInput, CameraInput, PurposeInput, RetentionInput, ReviewAction, UserInput, VisitorInput,
 )
 from app.schemas.vehicle import Movement, VehicleCreate, VehicleType
-from app.services.auth import user_public
+from app.services.auth import user_public, password_hash
 from app.services.operations import utcnow
 
 router = APIRouter(tags=["Campus operations"])
@@ -31,8 +33,6 @@ def audit(ops, action, old=None, new=None):
 @router.get("/purposes")
 def list_purposes(request: Request, include_inactive: bool = False, user=Depends(current_user)):
     query = {} if include_inactive and user["role"] == "admin" else {"active": True}
-    if user["role"] == "department_staff":
-        query["department"] = user.get("department")
     return [public(row) for row in request.app.state.db.purposes.find(query).sort("sort_order", 1)]
 
 
@@ -63,8 +63,33 @@ def update_purpose(purpose_id: str, payload: PurposeInput, request: Request, use
 
 
 @router.get("/visitors")
-def list_visitors(request: Request, user=Depends(operator), limit: int = Query(100, ge=1, le=500)):
-    return [public(row) for row in request.app.state.db.visitors.find().sort("created_at", -1).limit(limit)]
+def list_visitors(request: Request, user=Depends(operator), limit: int = Query(100, ge=1, le=500), search: str = ""):
+    query = {"$or": [{key: {"$regex": re.escape(search), "$options": "i"}} for key in ("number_plate", "visitor_name", "host_department")]} if search else {}
+    return [public(row) for row in request.app.state.db.visitors.find(query).sort("created_at", -1).limit(limit)]
+
+
+@router.get("/visitors/{visitor_id}")
+def visitor_detail(visitor_id: str, request: Request, user=Depends(operator)):
+    row = request.app.state.db.visitors.find_one({"_id": visitor_id})
+    if not row:
+        raise HTTPException(404, "Visitor not found")
+    return {"visitor": public(row), "movement": public(request.app.state.db.vehicle_logs.find_one({"_id": row.get("movement_id")}))}
+
+
+@router.put("/visitors/{visitor_id}")
+def visitor_update(visitor_id: str, payload: VisitorInput, request: Request, user=Depends(operator)):
+    db = request.app.state.db
+    old = db.visitors.find_one({"_id": visitor_id})
+    if not old:
+        raise HTTPException(404, "Visitor not found")
+    if payload.number_plate != old["number_plate"]:
+        raise HTTPException(409, "A visit's plate is immutable. Correct the vehicle registry after departure.")
+    changes = {k: v for k, v in payload.model_dump().items() if k not in ("camera_id", "review_id", "vehicle_type", "custom_purpose")}
+    changes["purpose"] = payload.custom_purpose if payload.purpose == "Other" and payload.custom_purpose else payload.purpose
+    changes["updated_at"] = utcnow()
+    row = db.visitors.find_one_and_update({"_id": visitor_id}, {"$set": changes}, return_document=ReturnDocument.AFTER)
+    audit(request.app.state.operations, "visitor.update", old, row)
+    return public(row)
 
 
 @router.post("/visitors", status_code=201)
@@ -72,8 +97,15 @@ async def register_visitor(payload: VisitorInput, request: Request, user=Depends
     db, ops = request.app.state.db, request.app.state.operations
     purpose = payload.custom_purpose.strip() if payload.purpose == "Other" and payload.custom_purpose else payload.purpose
     existing = db.vehicles.find_one({"number_plate": payload.number_plate})
-    if existing and existing.get("status") == "active":
-        raise HTTPException(409, "This plate is already registered")
+    camera = db.cameras.find_one({"_id": payload.camera_id, "direction": {"$in": ["IN", "BOTH"]}})
+    if not camera or not camera.get("active", True):
+        raise HTTPException(422, "Select an active entry camera")
+    if payload.review_id and not db.review_items.find_one({"_id": payload.review_id, "status": "pending"}):
+        raise HTTPException(409, "This review has already been resolved or does not exist")
+    if existing and existing["vehicle_type"] not in ("visitor", "service", "emergency", "other"):
+        raise HTTPException(409, "Use the registered campus vehicle's entry action")
+    if existing and db.vehicle_logs.find_one({"vehicle_id": existing["_id"], "status": "INSIDE"}):
+        raise HTTPException(409, "This vehicle is already inside")
     now = utcnow()
     visitor_vehicle = VehicleCreate(number_plate=payload.number_plate, vehicle_type=payload.vehicle_type,
                                     owner_name=payload.visitor_name, department=payload.host_department)
@@ -89,8 +121,11 @@ async def register_visitor(payload: VisitorInput, request: Request, user=Depends
         "expected_exit_time": payload.expected_exit_time, "purpose": purpose, "created_at": now,
         "created_by": user["_id"],
     }
+    result = ops.move(vehicle["id"], "IN", Movement(camera_id=payload.camera_id, purpose=purpose), verified_transition=True)
+    if result["duplicate"]:
+        raise HTTPException(409, "This visitor entry was already recorded")
+    visitor["movement_id"] = result["log"]["id"]
     db.visitors.insert_one(visitor)
-    result = ops.move(vehicle["id"], "IN", Movement(camera_id=payload.camera_id, purpose=purpose))
     audit(ops, "visitor.register", new={"visitor_id": visitor["_id"], "vehicle_id": vehicle["id"],
         "number_plate": payload.number_plate, "purpose": purpose,
         "host_department": payload.host_department, "movement_id": result["log"]["id"]})
@@ -128,6 +163,8 @@ def create_bus(payload: BusInput, request: Request, user=Depends(administrator))
     if not vehicle:
         raise HTTPException(422, "Select a registered bus vehicle")
     route = db.transport_routes.find_one({"route_number": payload.route_number})
+    if not route:
+        raise HTTPException(422, "Select an installed official route reference")
     row = {"_id": str(uuid4()), **payload.model_dump(), "route": route["route_name"] if route else payload.route_number,
            "route_reference_id": route.get("_id") if route else None, "route_reference_source": route.get("source_url") if route else None}
     try:
@@ -138,16 +175,27 @@ def create_bus(payload: BusInput, request: Request, user=Depends(administrator))
     return public(row)
 
 
+@router.get("/buses/{bus_id}/trips")
+def bus_history(bus_id: str, request: Request, user=Depends(operator)):
+    if not request.app.state.db.buses.find_one({"_id": bus_id}):
+        raise HTTPException(404, "Bus not found")
+    return [public(row) for row in request.app.state.db.bus_trips.find({"bus_id": bus_id}).sort("departure_time", -1).limit(500)]
+
+
 @router.put("/buses/{bus_id}")
 def update_bus(bus_id: str, payload: BusInput, request: Request, user=Depends(administrator)):
     db = request.app.state.db
     old = db.buses.find_one({"_id": bus_id})
     if not old:
         raise HTTPException(404, "Bus not found")
+    if db.bus_trips.find_one({"bus_id": bus_id, "status": "AWAY"}):
+        raise HTTPException(409, "Complete the active bus trip before editing this bus")
     vehicle = db.vehicles.find_one({"_id": payload.vehicle_id, "vehicle_type": "bus"})
     if not vehicle:
         raise HTTPException(422, "Select a registered bus vehicle")
     route = db.transport_routes.find_one({"route_number": payload.route_number})
+    if not route:
+        raise HTTPException(422, "Select an installed official route reference")
     changes = {**payload.model_dump(), "route": route["route_name"] if route else payload.route_number,
                "route_reference_id": route.get("_id") if route else None,
                "route_reference_source": route.get("source_url") if route else None}
@@ -161,7 +209,7 @@ def update_bus(bus_id: str, payload: BusInput, request: Request, user=Depends(ad
 
 @router.post("/buses/{bus_id}/trips", status_code=201)
 async def depart_bus(bus_id: str, request: Request, purpose: str = Query(min_length=1, max_length=120),
-                     note: str = "", user=Depends(operator)):
+                     note: str = Query(default="", max_length=500), user=Depends(operator)):
     db, ops = request.app.state.db, request.app.state.operations
     bus = db.buses.find_one({"_id": bus_id, "status": "active"})
     if not bus:
@@ -183,6 +231,7 @@ async def depart_bus(bus_id: str, request: Request, purpose: str = Query(min_len
         movement = await run_in_threadpool(
             ops.move, bus["vehicle_id"], "OUT",
             Movement(camera_id="main-gate-out", purpose=purpose),
+            verified_transition=True,
         )
     except Exception:
         db.bus_trips.delete_one({"_id": trip["_id"], "status": "AWAY"})
@@ -203,6 +252,7 @@ async def return_bus(bus_id: str, request: Request, user=Depends(operator)):
     movement = await run_in_threadpool(
         ops.move, trip["vehicle_id"], "IN",
         Movement(camera_id="main-gate-in", purpose=trip["purpose"]),
+        verified_transition=True,
     )
     row = db.bus_trips.find_one_and_update({"_id": trip["_id"], "status": "AWAY"},
         {"$set": {"status": "RETURNED", "return_time": now,
@@ -221,7 +271,7 @@ def transport_routes(request: Request, user=Depends(current_user)):
 
 
 @router.get("/cameras")
-def list_cameras(request: Request, user=Depends(current_user)):
+def list_cameras(request: Request, user=Depends(operator)):
     return [public(row) for row in request.app.state.db.cameras.find()]
 
 
@@ -285,7 +335,8 @@ async def resolve_review(review_id: str, payload: ReviewAction, request: Request
         if camera:
             direction = camera["direction"] if camera["direction"] in ("IN", "OUT") else payload.direction
         result = ops.move(vehicle["_id"], direction,
-                          Movement(camera_id=old["camera_id"], purpose=payload.purpose,
+                          Movement(camera_id=old["camera_id"], purpose=payload.purpose, custom_purpose=payload.custom_purpose,
+                                   event_id=f"review:{review_id}",
                                    detection_confidence=1.0), detection=None)
         movement = result["log"]
         changes["vehicle_id"] = vehicle["_id"]
@@ -305,11 +356,11 @@ def analytics(request: Request, user=Depends(current_user), days: int = Query(30
               vehicle_type: str | None = None, purpose: str | None = None, status: str | None = None,
               date_from: date | None = None, date_to: date | None = None):
     db = request.app.state.db
-    start = datetime.combine(date_from, day_time.min, tzinfo=timezone.utc) if date_from else utcnow() - timedelta(days=days)
-    end = datetime.combine(date_to + timedelta(days=1), day_time.min, tzinfo=timezone.utc) if date_to else utcnow()
+    start = datetime.combine(date_from, day_time.min, tzinfo=ZoneInfo(request.app.state.settings.campus_timezone)).astimezone(timezone.utc) if date_from else utcnow() - timedelta(days=days)
+    end = datetime.combine(date_to + timedelta(days=1), day_time.min, tzinfo=ZoneInfo(request.app.state.settings.campus_timezone)).astimezone(timezone.utc) if date_to else utcnow()
     if start > end:
         raise HTTPException(422, "Start date must be before end date")
-    query = {"entry_time": {"$gte": start, "$lt": end}}
+    query = {"$or": [{"entry_time": {"$gte": start, "$lt": end}}, {"exit_time": {"$gte": start, "$lt": end}}]}
     if vehicle_type:
         query["vehicle_type"] = vehicle_type
     if purpose:
@@ -322,14 +373,16 @@ def analytics(request: Request, user=Depends(current_user), days: int = Query(30
     rows = list(db.vehicle_logs.find(query))
     per_day, entry_hours, exit_hours, types, purposes = {}, [0] * 24, [0] * 24, {}, {}
     for row in rows:
-        day = row["entry_time"].date().isoformat()
-        per_day.setdefault(day, {"date": day, "entries": 0, "exits": 0})["entries"] += 1
-        entry_hours[row["entry_time"].hour] += 1
+        zone = ZoneInfo(request.app.state.settings.campus_timezone)
+        for key, counter, hours in (("entry_time", "entries", entry_hours), ("exit_time", "exits", exit_hours)):
+            moment = row.get(key)
+            if moment and start <= moment < end:
+                local = moment.astimezone(zone)
+                day = local.date().isoformat()
+                per_day.setdefault(day, {"date": day, "entries": 0, "exits": 0})[counter] += 1
+                hours[local.hour] += 1
         types[row["vehicle_type"]] = types.get(row["vehicle_type"], 0) + 1
         purposes[row["purpose"]] = purposes.get(row["purpose"], 0) + 1
-        if row.get("exit_time"):
-            per_day.setdefault(row["exit_time"].date().isoformat(), {"date": row["exit_time"].date().isoformat(), "entries": 0, "exits": 0})["exits"] += 1
-            exit_hours[row["exit_time"].hour] += 1
     complete = [row["duration_seconds"] for row in rows if row.get("duration_seconds") is not None]
     visits = len(rows)
     return {"days": sorted(per_day.values(), key=lambda x: x["date"]), "entries_by_hour": entry_hours,
@@ -354,13 +407,16 @@ def export_report(request: Request, user=Depends(current_user), vehicle_type: Ve
     if status:
         query["status"] = status
     if date_from:
-        query["entry_time"] = {"$gte": datetime.combine(date_from, day_time.min, tzinfo=timezone.utc)}
+        query["entry_time"] = {"$gte": datetime.combine(date_from, day_time.min, tzinfo=ZoneInfo(request.app.state.settings.campus_timezone)).astimezone(timezone.utc)}
     if date_to:
         if date_from and date_to < date_from:
             raise HTTPException(422, "Start date must be before end date")
         query.setdefault("entry_time", {})["$lt"] = datetime.combine(
-            date_to + timedelta(days=1), day_time.min, tzinfo=timezone.utc
-        )
+            date_to + timedelta(days=1), day_time.min, tzinfo=ZoneInfo(request.app.state.settings.campus_timezone)
+        ).astimezone(timezone.utc)
+    if "entry_time" in query:
+        window = query.pop("entry_time")
+        query["$or"] = [{"entry_time": window}, {"exit_time": window}]
     rows = request.app.state.db.vehicle_logs.find(query).sort("entry_time", -1)
     output = io.StringIO(newline="")
     writer = csv.writer(output)
@@ -372,7 +428,7 @@ def export_report(request: Request, user=Depends(current_user), vehicle_type: Ve
                 continue
         values = [row.get("number_plate"), row.get("vehicle_type"), row.get("purpose"), row.get("entry_time"),
                   row.get("exit_time"), row.get("duration_seconds"), row.get("status")]
-        writer.writerow(["'" + value if isinstance(value, str) and value[:1] in "=+-@" else value for value in values])
+        writer.writerow(["'" + value if isinstance(value, str) and value.lstrip()[:1] in "=+-@" else value for value in values])
     return StreamingResponse(iter([output.getvalue()]), media_type="text/csv",
                              headers={"Content-Disposition": "attachment; filename=gatelog-report.csv"})
 
@@ -404,7 +460,10 @@ def list_users(request: Request, user=Depends(administrator)):
 @router.post("/users", status_code=201)
 def create_user(payload: UserInput, request: Request, user=Depends(administrator)):
     data = payload.model_dump()
-    row = {"_id": str(uuid4()), **data, "auth_provider": "supabase",
+    password = data.pop("password")
+    if not password:
+        raise HTTPException(422, "A GateLog account password of at least 12 characters is required")
+    row = {"_id": str(uuid4()), **data, "auth_provider": "local", "password_hash": password_hash(password),
            "created_at": utcnow(), "updated_at": utcnow()}
     try:
         request.app.state.db.users.insert_one(row)
@@ -421,8 +480,13 @@ def update_user(user_id: str, payload: UserInput, request: Request, user=Depends
     if not old:
         raise HTTPException(404, "User not found")
     changes = payload.model_dump()
+    password = changes.pop("password")
+    if password:
+        changes["password_hash"] = password_hash(password)
+    if user_id == user["_id"] and (not payload.active or payload.role != "admin"):
+        raise HTTPException(409, "You cannot disable or demote your own administrator account")
     changes["updated_at"] = utcnow()
-    if not payload.active:
+    if not payload.active or password or payload.role != old["role"] or payload.department != old.get("department"):
         db.sessions.delete_many({"user_id": user_id})
     try:
         row = db.users.find_one_and_update({"_id": user_id}, {"$set": changes}, return_document=ReturnDocument.AFTER)

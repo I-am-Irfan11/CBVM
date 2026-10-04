@@ -57,7 +57,7 @@ def inside(
     return {
         "items": [
             ({**public(row), "owner_name": (ops.db.vehicles.find_one({"_id": row["vehicle_id"]}) or {}).get("owner_name")}
-             if user["role"] != "department_staff" else {key: row.get(key) for key in
+             if user["role"] != "department_staff" else {key: public(row).get(key) for key in
                  ("id", "number_plate", "vehicle_type", "purpose", "entry_time", "status")})
             for row in ops.db.vehicle_logs.find(query).sort("entry_time", -1).skip(offset).limit(limit)
         ],

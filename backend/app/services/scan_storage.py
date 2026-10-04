@@ -11,7 +11,7 @@ class ScanStorage:
         configured = all((settings.r2_endpoint_url, settings.r2_bucket,
                          settings.r2_access_key_id, settings.r2_secret_access_key))
         self.client = None
-        if configured:
+        if configured and settings.retain_scan_images:
             import boto3
 
             self.client = boto3.client(

@@ -135,8 +135,24 @@ async def mock_detection(payload: MockRequest, request: Request, user=Depends(op
 
 @router.websocket("/ws/events")
 async def websocket_events(socket: WebSocket):
+    if getattr(socket.app.state, "startup_error", None):
+        await socket.close(code=1013)
+        return
     origin = socket.headers.get("origin")
     if origin and origin not in socket.app.state.settings.cors_origins:
+        await socket.close(code=1008)
+        return
+    token = socket.cookies.get("gatelog_session")
+    authorization = socket.headers.get("authorization", "")
+    if authorization.startswith("Bearer "):
+        token = authorization[7:]
+    try:
+        if not token:
+            raise HTTPException(401, "Sign in required")
+        user, session = await run_in_threadpool(socket.app.state.auth.authenticate, token)
+        if user["role"] not in ("admin", "security"):
+            raise HTTPException(403, "Use scoped polling for department views")
+    except HTTPException:
         await socket.close(code=1008)
         return
     await socket.accept()
@@ -149,6 +165,11 @@ async def websocket_events(socket: WebSocket):
                 item = await asyncio.wait_for(queue.get(), timeout=20)
             except asyncio.TimeoutError:
                 item = {"type": "heartbeat", "data": {}}
+            try:
+                await run_in_threadpool(socket.app.state.auth.authenticate, token)
+            except HTTPException:
+                await socket.close(code=1008)
+                return
             await socket.send_json(item)
 
     sender = asyncio.create_task(send())

@@ -68,7 +68,8 @@ def parse_transport(html, *, fetched_at=None):
         raise ValueError("Source timetable label is missing")
     routes = []
     for prefix, rows in parser.tables:
-        route = re.search(r"Route\s+No\s*:\s*(\d+[A-Z]?)\s*[-–]\s*([^\n]+)", prefix, re.I)
+        # The official route 09 label omits the separator after the number.
+        route = re.search(r"Route\s+No\s*:\s*(\d+[A-Z]?)(?:\s*[-–]\s*|\s+)([^\n]+)", prefix, re.I)
         if not route:
             if any("boarding point" in cell.lower() for row in rows for cell in row):
                 raise ValueError("Timetable has no route identity")
@@ -89,7 +90,7 @@ def parse_transport(html, *, fetched_at=None):
                            "time": f"{int(timing[1]):02}:{timing[2]}"})
         if len(points) < 2 or "HINDUSTAN" not in points[-1]["name"].upper():
             raise ValueError("Timetable campus endpoint is missing")
-        number = route[1].zfill(2)
+        number = route[1].upper().zfill(2)
         item = {"route_number": number, "route_name": route[2].strip(),
                 "bus_name": bus[1].strip(), "boarding_points": points,
                 "endpoint": points[-1]["name"]}

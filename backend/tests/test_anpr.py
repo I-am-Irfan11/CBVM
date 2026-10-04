@@ -8,36 +8,42 @@ from app.core.config import Settings
 from app.main import create_app
 
 
-@pytest.mark.parametrize("scenario", list(MockANPRService.scenarios))
-def test_mock_scenarios(scenario):
-    detection = MockANPRService().detect(scenario)[0]
+@pytest.mark.parametrize("plate", ["TN 09 AB 1234", "TN07EF5678", "unreadable"])
+def test_mock_requires_explicit_test_text(plate):
+    detection = MockANPRService().detect(plate)[0]
     assert detection.raw_text
     assert 0 <= detection.confidence <= 1
     assert detection.timestamp.utcoffset() is not None
     assert detection.processing_time >= 0
-    if scenario == "low_confidence":
-        assert detection.confidence < 0.8
+    if plate == "unreadable":
         assert not detection.valid
 
 
-@pytest.mark.parametrize("scenario", ["student", "staff", "bus", "service"])
-def test_mock_full_movement(client, scenario):
-    result = client.post("/detections/mock", json={"scenario": scenario}).json()
+def test_mock_never_invents_detection_from_camera_frame():
+    assert MockANPRService().detect(np.zeros((64, 100, 3), dtype=np.uint8)) == []
+    assert MockANPRService().detect() == []
+
+
+def test_mock_full_movement(client, vehicle):
+    payload = {"vehicle_id": vehicle["id"]}
+    result = client.post("/detections/mock", json=payload).json()
     assert result["outcome"] == "accepted"
-    assert client.post("/detections/mock", json={"scenario": scenario}).json()["outcome"] == "duplicate"
+    assert client.post("/detections/mock", json=payload).json()["outcome"] == "duplicate"
     assert (
-        client.post("/detections/mock", json={"scenario": scenario, "direction": "OUT"}).json()["log"][
+        client.post("/detections/mock", json={**payload, "direction": "OUT"}).json()["log"][
             "status"
         ]
         == "COMPLETED"
     )
 
 
-@pytest.mark.parametrize("scenario", ["unknown", "low_confidence"])
-def test_review_confidence_dedup_and_dismiss(client, scenario):
-    first = client.post("/detections/mock", json={"scenario": scenario}).json()
+@pytest.mark.parametrize("confidence", [0.43, 0.97])
+def test_review_confidence_dedup_and_dismiss(app, client, confidence):
+    detection = MockANPRService().detect("KA03ZZ9876")[0]
+    detection.confidence = confidence
+    first = app.state.processor.process(detection, "main-gate-in")
     assert first["outcome"] == "review"
-    second = client.post("/detections/mock", json={"scenario": scenario}).json()
+    second = app.state.processor.process(detection, "main-gate-in")
     assert second["review"]["id"] == first["review"]["id"]
     assert second["review"]["sightings"] == 2
     assert client.get("/vehicles/inside").json()["total"] == 0
@@ -53,6 +59,7 @@ def test_real_mode_lazy_and_mock_disabled():
     app = create_app(
         Settings(
             _env_file=None,
+            app_env="test",
             database_mode="memory",
             use_mock_ai=False,
             run_video_worker=False,
@@ -66,7 +73,7 @@ def test_real_mode_lazy_and_mock_disabled():
             "password_hash": password_hash("TestOnly-password-123!"), "created_at": datetime.now(timezone.utc)})
         token = app.state.auth.login("admin", "TestOnly-password-123!", "test")["access_token"]
         assert client.post("/detections/mock", headers={"Authorization": f"Bearer {token}"},
-                           json={"scenario": "student"}).status_code == 409
+                           json={"vehicle_id": "not-used"}).status_code == 409
 
 
 def test_mock_video():
@@ -118,15 +125,22 @@ def test_opencv_file_source(tmp_path):
         source.close()
 
 
-def test_image_endpoint_and_raw_evidence(client):
+def test_image_endpoint_and_raw_evidence(app, client, vehicle):
     import cv2
 
+    class ImageRecognizer:
+        def detect(self, frame):
+            assert frame.shape == (64, 100, 3)
+            return MockANPRService().detect(vehicle["number_plate"])
+
+    app.state.image_anpr = ImageRecognizer()
     encoded = cv2.imencode(".jpg", np.zeros((64, 100, 3), dtype=np.uint8))[1].tobytes()
     response = client.post("/anpr/detect", content=encoded, headers={"Content-Type": "image/jpeg"})
     assert response.status_code == 200
     result = response.json()["results"][0]
     assert result["outcome"] == "accepted"
-    assert result["log"]["entry_detection"]["raw_text"] == "TN 09 AB 1234"
+    assert result["log"]["entry_detection"]["raw_text"] == vehicle["number_plate"]
+    assert response.json()["mock_ai"] is False
     assert (
         client.post("/anpr/detect", content=b"bad", headers={"Content-Type": "image/jpeg"}).status_code == 422
     )
@@ -134,7 +148,7 @@ def test_image_endpoint_and_raw_evidence(client):
 
 
 def test_confidence_threshold_with_valid_plate(app, client):
-    detection = MockANPRService().detect("student")[0]
+    detection = MockANPRService().detect("TN09AB1234")[0]
     detection.confidence = 0.79
     result = app.state.processor.process(detection, "main-gate-in")
     assert result["outcome"] == "review"
@@ -148,7 +162,16 @@ def test_capture_reconnects_after_source_failure(app, client, monkeypatch):
     worker = CaptureWorker(app.state, None)
     events, opened, closed = [], [], []
     worker.emit = lambda kind, value: events.append((kind, value))
-    monkeypatch.setattr(worker.stop_event, "wait", lambda seconds: worker.stop_event.is_set())
+    def wait(seconds):
+        if worker.last_frame_time is not None:
+            worker.stop()
+        return worker.stop_event.is_set()
+    monkeypatch.setattr(worker.stop_event, "wait", wait)
+
+    class Recognizer:
+        def detect(self, frame):
+            return MockANPRService().detect("TN09AB1234")
+    app.state.anpr = Recognizer()
 
     class Source:
         def __init__(self, number):
@@ -157,7 +180,6 @@ def test_capture_reconnects_after_source_failure(app, client, monkeypatch):
         def read(self):
             if self.number == 1:
                 raise EOFError("Disconnected")
-            worker.stop_event.set()
             return np.zeros((64, 100, 3), dtype=np.uint8)
 
         def close(self):
@@ -172,4 +194,26 @@ def test_capture_reconnects_after_source_failure(app, client, monkeypatch):
     assert opened == [1, 2]
     assert closed == [1, 2]
     assert any(data.get("health_status") == "offline" for _, data in events)
+    assert [kind for kind, _ in events].count("camera.offline") == 1
+    assert [kind for kind, _ in events].count("camera.restored") == 1
+    assert worker.health_status == "online"
     assert app.state.db.vehicle_logs.count_documents({"status": "INSIDE"}) == 1
+
+
+def test_real_image_endpoint_unavailable_model_never_uses_mock(app, client, tmp_path):
+    import cv2
+
+    assert isinstance(app.state.image_anpr, RealANPRService)
+    app.state.image_anpr.path = tmp_path / "missing.pt"
+    encoded = cv2.imencode(".jpg", np.zeros((64, 100, 3), dtype=np.uint8))[1].tobytes()
+    response = client.post("/anpr/detect", content=encoded, headers={"Content-Type": "image/jpeg"})
+    assert response.status_code == 503
+    assert "Real ANPR" in response.json()["detail"]
+    assert app.state.db.vehicle_logs.count_documents({}) == 0
+
+
+def test_single_image_rejects_both_direction(app, client):
+    app.state.db.cameras.update_one({"_id": "main-gate-in"}, {"$set": {"direction": "BOTH"}})
+    response = client.post("/anpr/detect", content=b"unused", headers={"Content-Type": "image/jpeg"})
+    assert response.status_code == 422
+    assert "Single-frame" in response.json()["detail"]

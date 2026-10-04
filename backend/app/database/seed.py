@@ -9,6 +9,8 @@ from app.models.documents import Bus, Camera
 
 
 def seed(db, settings):
+    if settings.seed_operational_data and settings.app_env != "test":
+        raise RuntimeError("Synthetic operational records are permitted only in isolated tests")
     now = datetime.now(timezone.utc)
     if settings.seed_operational_data:
         for source in json.loads((ROOT / "database/seed/vehicles.json").read_text()):

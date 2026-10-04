@@ -34,8 +34,8 @@ class Operations:
                 "role": identity.get("role"),
                 "action": action,
                 "time": now,
-                "old_values": public(old),
-                "new_values": public(new),
+                "old_values": public({k: v for k, v in old.items() if k not in ("password", "password_hash", "csrf", "access_token")} if old else None),
+                "new_values": public({k: v for k, v in new.items() if k not in ("password", "password_hash", "csrf", "access_token")} if new else None),
                 "expires_at": now + timedelta(days=self.settings.retention_days),
             }
         )
@@ -83,11 +83,11 @@ class Operations:
         payload.status = "inactive"
         return self.update(vehicle_id, payload)
 
-    def move(self, vehicle_id, direction, payload, detection=None):
+    def move(self, vehicle_id, direction, payload, detection=None, verified_transition=False):
         with self.lock:
             vehicle = self.vehicle(vehicle_id)
             camera = self.db.cameras.find_one({"_id": payload.camera_id})
-            if not camera:
+            if not camera or not camera.get("active", True):
                 raise HTTPException(404, "Camera not found")
             if camera["direction"] not in (direction, "BOTH"):
                 raise HTTPException(422, "Camera direction does not match this movement")
@@ -117,7 +117,7 @@ class Operations:
                 {"vehicle_id": vehicle_id, camera_field: payload.camera_id, time_field: {"$ne": None}},
                 sort=[(time_field, -1)],
             )
-            if last_same_direction:
+            if last_same_direction and not verified_transition:
                 elapsed = (now - last_same_direction[time_field]).total_seconds()
                 if 0 <= elapsed < self.settings.duplicate_cooldown_seconds:
                     return {"duplicate": True, "log": public(last_same_direction)}
@@ -129,6 +129,7 @@ class Operations:
                     "vehicle_id": vehicle_id,
                     "number_plate": vehicle["number_plate"],
                     "vehicle_type": vehicle["vehicle_type"],
+                    "department": vehicle.get("department"),
                     "entry_time": now,
                     "exit_time": None,
                     "duration_seconds": None,
@@ -177,6 +178,7 @@ class Operations:
                         "log": public(self.db.vehicle_logs.find_one({"_id": opened["_id"]})),
                     }
                 self.audit("vehicle.exit", opened, row)
+                self.db.visitors.update_many({"movement_id": row["_id"]}, {"$set": {"expires_at": now + timedelta(days=self.settings.retention_days)}})
             return {"duplicate": False, "log": public(row)}
 
     def today_bounds(self):
@@ -232,7 +234,7 @@ class Operations:
         for field, kind in (("entry_time", "vehicle.entry"), ("exit_time", "vehicle.exit")):
             query = {field: {"$ne": None}}
             if vehicle_filter is not None:
-                query["vehicle_id"] = vehicle_filter
+                query["vehicle_id"] = {"$in": vehicle_filter} if isinstance(vehicle_filter, list) else vehicle_filter
             for row in self.db.vehicle_logs.find(query).sort(field, -1).limit(limit):
                 events.append(
                     {

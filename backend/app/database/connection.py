@@ -2,6 +2,8 @@ from pymongo import ASCENDING, DESCENDING, MongoClient
 
 
 def connect(settings):
+    if settings.app_env != "test" and (settings.database_mode == "memory" or settings.use_mock_ai or settings.seed_operational_data):
+        raise RuntimeError("Memory storage, mock recognition and synthetic records are restricted to APP_ENV=test. Configure MongoDB for normal operation.")
     if settings.database_mode == "memory":
         import mongomock
 
@@ -21,7 +23,7 @@ def connect(settings):
 def create_indexes(db):
     db.users.create_index("username", unique=True)
     db.users.create_index("email", unique=True)
-    db.users.create_index([("auth_provider", 1), ("provider_subject", 1)], unique=True, sparse=True)
+    db.users.create_index("provider_subject", unique=True, sparse=True)
     db.sessions.create_index("expires_at", expireAfterSeconds=0)
     db.sessions.create_index("user_id")
     db.login_attempts.create_index("expires_at", expireAfterSeconds=0)
@@ -56,7 +58,7 @@ def create_indexes(db):
         unique=True,
         partialFilterExpression={"status": "pending"},
     )
-    for collection in ("vehicle_logs", "audit_logs", "review_items"):
+    for collection in ("vehicle_logs", "audit_logs", "review_items", "visitors"):
         db[collection].create_index("expires_at", expireAfterSeconds=0)
 
 

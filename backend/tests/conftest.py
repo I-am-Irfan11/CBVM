@@ -10,7 +10,9 @@ def app():
     return create_app(
         Settings(
             _env_file=None,
+            app_env="test",
             database_mode="memory",
+            seed_operational_data=True,
             seed_on_startup=True,
             use_mock_ai=True,
             run_video_worker=False,

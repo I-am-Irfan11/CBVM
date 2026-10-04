@@ -11,7 +11,8 @@ from app.ai.anpr import MockANPRService, RealANPRService
 from app.core.config import Settings
 from app.database.connection import connect
 from app.database.seed import seed
-from app.routers import anpr, dashboard, vehicles, campus
+from app.routers import anpr, dashboard, vehicles, campus, auth
+from app.services.auth import AuthService
 from app.services.capture import CaptureWorker
 from app.services.detections import DetectionProcessor
 from app.services.events import EventHub
@@ -42,12 +43,24 @@ def create_app(settings: Settings | None = None):
 
     @asynccontextmanager
     async def lifespan(app):
-        client, db = await run_in_threadpool(connect, settings)
+        app.state.settings = settings
+        app.state.startup_error = None
+        try:
+            if settings.app_env != "test" and not settings.jwt_secret_key:
+                raise RuntimeError("JWT_SECRET_KEY must be configured. Run scripts/bootstrap_env.py locally.")
+            if settings.app_env == "production" and not settings.cookie_secure:
+                raise RuntimeError("Production requires COOKIE_SECURE=true and HTTPS.")
+            client, db = await run_in_threadpool(connect, settings)
+        except (PyMongoError, RuntimeError) as error:
+            app.state.startup_error = ("MongoDB is unavailable. Check MONGODB_URI, database permissions and network access. No in-memory fallback is enabled."
+                                       if isinstance(error, PyMongoError) else str(error))
+            yield
+            return
         worker = task = None
         try:
             app.state.settings = settings
             app.state.client, app.state.db = client, db
-            db.users.update_many({}, {"$unset": {"password_hash": ""}})
+            app.state.auth = AuthService(db, settings)
             saved_retention = db.settings.find_one({"_id": "retention"})
             if saved_retention:
                 settings.retention_days = saved_retention["retention_days"]
@@ -57,6 +70,7 @@ def create_app(settings: Settings | None = None):
             app.state.scan_storage = ScanStorage(settings)
             app.state.processor = DetectionProcessor(app.state.operations)
             app.state.anpr = MockANPRService() if settings.use_mock_ai else RealANPRService(settings)
+            app.state.image_anpr = RealANPRService(settings)
             app.state.hub = EventHub()
             if settings.run_video_worker:
                 worker = CaptureWorker(app.state, asyncio.get_running_loop())
@@ -77,15 +91,25 @@ def create_app(settings: Settings | None = None):
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
-        allow_credentials=False,
+        allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "DELETE"],
-        allow_headers=["Content-Type", "Authorization"],
+        allow_headers=["Content-Type", "Authorization", "X-CSRF-Token"],
     )
     app.add_middleware(ApiPrefixMiddleware)
+    @app.middleware("http")
+    async def availability(request, call_next):
+        error = getattr(request.app.state, "startup_error", None)
+        if error:
+            return JSONResponse({"detail": error, "status": "unavailable"}, status_code=503)
+        response = await call_next(request)
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        return response
     app.include_router(vehicles.router)
     app.include_router(dashboard.router)
     app.include_router(anpr.router)
     app.include_router(campus.router)
+    app.include_router(auth.router)
 
     @app.exception_handler(PyMongoError)
     async def database_error(request: Request, error: PyMongoError):

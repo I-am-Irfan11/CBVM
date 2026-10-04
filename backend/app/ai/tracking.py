@@ -45,7 +45,8 @@ class CentroidIoUTracker(Tracker):
     def iou(a, b):
         intersection = max(0, min(a[2], b[2]) - max(a[0], b[0])) * max(
             0, min(a[3], b[3]) - max(a[1], b[1]))
-        area = lambda box: max(0, box[2] - box[0]) * max(0, box[3] - box[1])
+        def area(box):
+            return max(0, box[2] - box[0]) * max(0, box[3] - box[1])
         union = area(a) + area(b) - intersection
         return intersection / union if union else 0
 

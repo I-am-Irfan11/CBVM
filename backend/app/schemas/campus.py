@@ -60,7 +60,7 @@ class CameraInput(StrictModel):
     camera_name: str = Field(min_length=1, max_length=100)
     location: str = Field(min_length=1, max_length=120)
     direction: Literal["IN", "OUT", "BOTH"] = "IN"
-    source: Literal["mock", "rtsp", "mp4", "webcam"] = "mock"
+    source: Literal["rtsp", "mp4", "webcam"] = "webcam"
     gate_line: list[float] = Field(default=[0.1, 0.5, 0.9, 0.5], min_length=4, max_length=4)
     inward_sign: Literal[-1, 1] = 1
     minimum_movement: float = Field(default=.03, gt=0, le=.5)
@@ -78,12 +78,13 @@ class ReviewAction(StrictModel):
     action: Literal["confirm", "reject"]
     number_plate: str | None = Field(default=None, max_length=20)
     direction: Literal["IN", "OUT"] = "IN"
-    purpose: str = "Campus visit"
+    purpose: str = Field(default="Campus visit", min_length=1, max_length=240)
     custom_purpose: str | None = Field(default=None, max_length=240)
     note: str = Field(default="", max_length=500)
 
 
 class UserInput(StrictModel):
+    password: str | None = Field(default=None, min_length=12, max_length=256)
     username: str = Field(min_length=3, max_length=80, pattern=r"^[a-zA-Z0-9_.-]+$")
     email: str = Field(min_length=3, max_length=254, pattern=r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
     full_name: str = Field(min_length=1, max_length=100)

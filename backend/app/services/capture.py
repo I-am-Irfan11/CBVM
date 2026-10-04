@@ -55,27 +55,21 @@ class CaptureWorker:
                 source = (self.source_factory or video_source)(self.state.settings)
                 while not self.stop_event.is_set():
                     frame = source.read()
+                    if self.stop_event.is_set():
+                        break
                     self.status("mock" if self.source == "mock" else "online", received_frame=True)
                     backoff = retry_delay
-                    detections = self.state.anpr.detect(frame)
-                    camera = self.state.db.cameras.find_one({"_id": camera_id})
-                    if camera is None:
-                        raise RuntimeError("Configured camera was removed")
-                    for detection in self.tracker.process(detections, camera, frame.shape):
-                        storage = self.state.scan_storage
-                        if storage.enabled:
-                            object_key = storage.put_frame(frame, camera_id)
-                            detection = detection.model_copy(update={"capture_key": object_key})
-                        result = self.state.processor.process(detection, camera_id)
-                        if result["outcome"] == "review":
-                            self.emit("review.item", result["review"])
-                        elif result["outcome"] == "accepted":
-                            kind = "vehicle.entry" if result["log"]["status"] == "INSIDE" else "vehicle.exit"
-                            self.emit(kind, result["log"])
+                    try:
+                        self.process_frame(frame, camera_id)
+                    except Exception:
+                        # An OCR/storage failure does not mean the video source is offline.
+                        logger.error("Frame processing failed. Check model, OCR, storage and database configuration.")
+                        self.emit("camera.processing_error", {"id": camera_id,
+                                  "detail": "Frame processing unavailable; check model, OCR, storage and database."})
                     self.stop_event.wait(1 / self.state.settings.frame_sample_rate)
             except Exception:
                 # Never log RTSP URLs or their embedded credentials.
-                logger.error("Capture interrupted. Check source, model, OCR and database configuration.")
+                logger.error("Capture interrupted. Check configured video source and database connection.")
                 try:
                     self.status("offline")
                 except Exception:
@@ -91,3 +85,22 @@ class CaptureWorker:
             if self.stop_event.wait(backoff):
                 break
             backoff = min(backoff * 2, 30)
+
+    def process_frame(self, frame, camera_id):
+        detections = self.state.anpr.detect(frame)
+        camera = self.state.db.cameras.find_one({"_id": camera_id})
+        if camera is None:
+            raise RuntimeError("Configured camera was removed")
+        for detection in self.tracker.process(detections, camera, frame.shape):
+            if self.stop_event.is_set():
+                break
+            storage = self.state.scan_storage
+            if storage.enabled:
+                object_key = storage.put_frame(frame, camera_id)
+                detection = detection.model_copy(update={"capture_key": object_key})
+            result = self.state.processor.process(detection, camera_id)
+            if result["outcome"] == "review":
+                self.emit("review.item", result["review"])
+            elif result["outcome"] == "accepted":
+                kind = "vehicle.entry" if result["log"]["status"] == "INSIDE" else "vehicle.exit"
+                self.emit(kind, result["log"])

@@ -20,11 +20,17 @@ def test_official_snapshot_is_sanitized_and_seeded(client):
     assert snapshot["reference_only"] is True
     assert snapshot["source_timetable_label"] == "Bus Route Timings 2023-2024"
     assert len(snapshot["routes"]) == 23
+    assert all(len(route["boarding_points"]) >= 2 for route in snapshot["routes"])
+    assert all(route["endpoint"] == route["boarding_points"][-1]["name"] for route in snapshot["routes"])
+    assert snapshot["routes"][0]["boarding_points"][0]["name"] == "AVADI CIRCLE"
+    assert snapshot["routes"][0]["boarding_points"][0]["time"] == "06:00"
     serialized = json.dumps(snapshot["routes"])
     assert not re.search(r"\b\d{10}\b|incharge|@", serialized, re.I)
     assert seed_transport(db) == 23
     assert db.transport_routes.count_documents({"reference_only": True}) == 23
     assert db.transport_routes.find_one({"route_number": "19A"})["bus_name"] == "Colombia"
+    assert seed_transport(db) == 23
+    assert db.transport_routes.count_documents({}) == 23
 
 
 def test_parser_deduplicates_consistent_tables_and_rejects_malformed_data():
@@ -43,3 +49,35 @@ def test_failed_refresh_leaves_existing_snapshot_untouched(tmp_path):
     with pytest.raises(ValueError):
         refresh_snapshot(snapshot, attempts=1, fetch=lambda: "<html>broken</html>")
     assert snapshot.read_text(encoding="utf-8") == "original"
+
+
+def test_route_nine_source_label_has_no_separator_after_number():
+    parsed = parse_transport(TABLE.replace("01 – Avadi", "09 Mint – Triplicane (via.) Royapettah"))
+    assert parsed["routes"][0]["route_number"] == "09"
+    assert parsed["routes"][0]["route_name"] == "Mint – Triplicane (via.) Royapettah"
+
+
+@pytest.mark.parametrize("broken", [
+    TABLE.replace("6.00", "25.70"),
+    TABLE.replace("AVADI CIRCLE", "Call 9876543210"),
+    TABLE.replace("Bus Route Timings 2023-2024", "Unknown date"),
+    TABLE + TABLE.replace("Meghna", "Different bus"),
+])
+def test_malformed_and_contact_data_rejected(broken):
+    with pytest.raises(ValueError):
+        parse_transport(broken)
+
+
+def test_refresh_retries_then_atomically_replaces_snapshot(tmp_path):
+    target = tmp_path / "routes.json"
+    attempts, sleeps = [], []
+    def fetch():
+        attempts.append(1)
+        if len(attempts) == 1:
+            raise OSError("temporary network failure")
+        return TABLE
+    refreshed = refresh_snapshot(target, fetch=fetch, sleep=sleeps.append)
+    assert json.loads(target.read_text(encoding="utf-8")) == refreshed
+    assert sleeps == [1]
+    assert len(attempts) == 2
+    assert not list(tmp_path.glob("*.tmp"))

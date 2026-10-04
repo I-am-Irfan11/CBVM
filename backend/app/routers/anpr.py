@@ -6,6 +6,30 @@ router = APIRouter(prefix="/anpr", tags=["ANPR"])
 MAX_IMAGE_BYTES = 8 * 1024 * 1024
 
 
+def readiness(settings):
+    import importlib.util
+    import shutil
+    from pathlib import Path
+    from app.core.config import ROOT
+    path = Path(settings.yolo_model_path)
+    path = path if path.is_absolute() else ROOT / path
+    missing = []
+    if not path.is_file():
+        missing.append("Trained license-plate YOLO weights are missing. Set YOLO_MODEL_PATH to a local .pt file.")
+    for name in ("ultralytics", "pytesseract"):
+        if importlib.util.find_spec(name) is None:
+            missing.append(f"Python package {name} is not installed. Install backend/requirements-ai.txt in the backend environment.")
+    if shutil.which("tesseract") is None:
+        missing.append("Tesseract OCR executable is missing from the backend PATH.")
+    return {"ready": not missing, "dependencies": missing,
+            "message": "Dependencies detected; recognition quality requires camera validation." if not missing else " ".join(missing)}
+
+
+@router.get("/status")
+def status(request: Request, user=Depends(operator)):
+    return readiness(request.app.state.settings)
+
+
 @router.post("/detect")
 async def detect_image(request: Request, camera_id: str = Query(default="main-gate-in", max_length=80),
                        user=Depends(operator)):
@@ -22,18 +46,23 @@ async def detect_image(request: Request, camera_id: str = Query(default="main-ga
         import cv2
         import numpy as np
 
-        if not request.app.state.db.cameras.find_one({"_id": camera_id}):
+        camera = request.app.state.db.cameras.find_one({"_id": camera_id})
+        if not camera or not camera.get("active", True):
             raise HTTPException(404, "Camera not found")
+        if camera["direction"] == "BOTH":
+            raise HTTPException(422, "Single-frame capture requires a dedicated IN or OUT camera. Use the continuous video worker for line-crossing direction.")
         frame = cv2.imdecode(np.frombuffer(data, dtype=np.uint8), cv2.IMREAD_COLOR) if data else None
         if frame is None:
             raise HTTPException(422, "Unable to decode image")
         if frame.shape[0] * frame.shape[1] > 16000000:
             raise HTTPException(413, "Image exceeds 16 megapixels")
         try:
-            detections = request.app.state.anpr.detect(frame)
+            from app.services.operations import utcnow
+            request.app.state.db.cameras.update_one({"_id": camera_id}, {"$set": {"health_status": "online", "last_frame_time": utcnow()}})
+            detections = request.app.state.image_anpr.detect(frame)
         except (ImportError, RuntimeError, OSError):
             raise HTTPException(
-                503, "Real ANPR is not ready. Check YOLO weights, AI dependencies and OCR installation."
+                503, "Real ANPR is not ready. " + readiness(request.app.state.settings)["message"]
             ) from None
         return detections
 
@@ -58,7 +87,7 @@ async def detect_image(request: Request, camera_id: str = Query(default="main-ga
             await request.app.state.hub.publish("review.item", result["review"])
     if results:
         await request.app.state.hub.publish("camera.status", {"id": camera_id})
-    return {"results": results, "mock_ai": request.app.state.settings.use_mock_ai}
+    return {"results": results, "mock_ai": False}
 
 
 @router.get("/scans/{object_key:path}")

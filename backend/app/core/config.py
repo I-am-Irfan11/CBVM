@@ -10,11 +10,12 @@ ROOT = Path(__file__).resolve().parents[3]
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=ROOT / ".env", extra="ignore")
-    database_mode: Literal["memory", "mongodb"] = "memory"
+    app_env: Literal["development", "production", "test"] = "development"
+    database_mode: Literal["memory", "mongodb"] = "mongodb"
     mongodb_uri: str = "mongodb://127.0.0.1:27017"
     mongodb_database: str = "gatelog"
-    use_mock_ai: bool = True
-    seed_on_startup: bool = True
+    use_mock_ai: bool = False
+    seed_on_startup: bool = False
     yolo_model_path: str = "models/license_plate.pt"
     ocr_confidence_threshold: float = Field(default=0.8, ge=0, le=1)
     duplicate_cooldown_seconds: int = Field(default=30, ge=0)
@@ -40,6 +41,7 @@ class Settings(BaseSettings):
     supabase_allowed_domains: str = ""
     supabase_admin_emails: str = ""
     r2_endpoint_url: str = ""
+    retain_scan_images: bool = False
     r2_bucket: str = ""
     r2_access_key_id: str = ""
     r2_secret_access_key: str = ""

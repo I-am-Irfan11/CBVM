@@ -1,31 +1,1992 @@
 {
   "source_url": "https://hindustanuniv.ac.in/facilities/transport/",
-  "fetched_at": "2026-10-03T09:58:51Z",
+  "fetched_at": "2026-10-04T04:02:30.836527+00:00",
   "source_timetable_label": "Bus Route Timings 2023-2024",
   "reference_only": true,
   "routes": [
-    {"route_number":"01","route_name":"Avadi","bus_name":"Meghna","boarding_points":[],"endpoint":null},
-    {"route_number":"02","route_name":"Periyar Nagar","bus_name":"Chittar","boarding_points":[],"endpoint":null},
-    {"route_number":"03","route_name":"Purasawakkam","bus_name":"Hemavathy","boarding_points":[],"endpoint":null},
-    {"route_number":"04","route_name":"Poonamallee","bus_name":"Thames","boarding_points":[],"endpoint":null},
-    {"route_number":"05","route_name":"Tiruvottriyur","bus_name":"Gomti","boarding_points":[],"endpoint":null},
-    {"route_number":"06","route_name":"Thiruvallur","bus_name":"Danube","boarding_points":[],"endpoint":null},
-    {"route_number":"07","route_name":"Red Hills (Via Metha Nagar)","bus_name":"Krishna","boarding_points":[],"endpoint":null},
-    {"route_number":"08","route_name":"Anna Nagar","bus_name":"Ganga","boarding_points":[],"endpoint":null},
-    {"route_number":"09","route_name":"Mint Triplicane (Via Royapettah)","bus_name":"Missouri","boarding_points":[],"endpoint":null},
-    {"route_number":"10","route_name":"Mylapore / Besant Nagar","bus_name":"Thapti","boarding_points":[],"endpoint":null},
-    {"route_number":"11","route_name":"T. Nagar","bus_name":"Bhavani","boarding_points":[],"endpoint":null},
-    {"route_number":"12","route_name":"West Mambalam / Velachery","bus_name":"Nile","boarding_points":[],"endpoint":null},
-    {"route_number":"13","route_name":"Kundrathur / Tambaram","bus_name":"Congo","boarding_points":[],"endpoint":null},
-    {"route_number":"14","route_name":"Madipakkam (Via Nanganallur)","bus_name":"Godavari","boarding_points":[],"endpoint":null},
-    {"route_number":"15","route_name":"Madipakkam (Via Keelkatalai)","bus_name":"Brahmaputra","boarding_points":[],"endpoint":null},
-    {"route_number":"16","route_name":"Saidapet (ECR)","bus_name":"Narmada","boarding_points":[],"endpoint":null},
-    {"route_number":"17","route_name":"Adyar","bus_name":"Thiruveni A/C Bus","boarding_points":[],"endpoint":null},
-    {"route_number":"18","route_name":"Tambaram (Camp Road) Via Poondibazar - Court","bus_name":"Beas","boarding_points":[],"endpoint":null},
-    {"route_number":"19A","route_name":"Camp Road","bus_name":"Colombia","boarding_points":[],"endpoint":null},
-    {"route_number":"20","route_name":"Tambaram","bus_name":"Gambia","boarding_points":[],"endpoint":null},
-    {"route_number":"21","route_name":"Kalpakkam","bus_name":"Yellowstone","boarding_points":[],"endpoint":null},
-    {"route_number":"22","route_name":"Chengalpattu","bus_name":"Amaravathy","boarding_points":[],"endpoint":null},
-    {"route_number":"23","route_name":"Walajabad (Padappai)","bus_name":"Son","boarding_points":[],"endpoint":null}
+    {
+      "route_number": "01",
+      "route_name": "Avadi",
+      "bus_name": "Meghna",
+      "boarding_points": [
+        {
+          "sequence": 1,
+          "name": "AVADI CIRCLE",
+          "time": "06:00"
+        },
+        {
+          "sequence": 2,
+          "name": "MURUGAPPA POLYTECHNIC",
+          "time": "06:05"
+        },
+        {
+          "sequence": 3,
+          "name": "THIRUMULLAIVAIL",
+          "time": "06:10"
+        },
+        {
+          "sequence": 4,
+          "name": "AMBATTUR O.T (B.S.)-KAVERI TEXTILES",
+          "time": "06:15"
+        },
+        {
+          "sequence": 5,
+          "name": "CANARA BANK (B.S.)",
+          "time": "06:20"
+        },
+        {
+          "sequence": 6,
+          "name": "VAVIN(BS)",
+          "time": "06:25"
+        },
+        {
+          "sequence": 7,
+          "name": "GOLDEN FLATS (BS)",
+          "time": "06:30"
+        },
+        {
+          "sequence": 8,
+          "name": "COLLECTOR NAGAR",
+          "time": "06:35"
+        },
+        {
+          "sequence": 9,
+          "name": "THIRUMANGALAM BANK",
+          "time": "06:37"
+        },
+        {
+          "sequence": 10,
+          "name": "NERKUNDRAM",
+          "time": "06:45"
+        },
+        {
+          "sequence": 11,
+          "name": "MADURAVAYIL",
+          "time": "06:50"
+        },
+        {
+          "sequence": 12,
+          "name": "EARIKARAI BUS STOP",
+          "time": "07:00"
+        },
+        {
+          "sequence": 13,
+          "name": "HINDUSTAN UNIVERSITY CAMPUS",
+          "time": "08:00"
+        }
+      ],
+      "endpoint": "HINDUSTAN UNIVERSITY CAMPUS"
+    },
+    {
+      "route_number": "02",
+      "route_name": "Periyar Nagar",
+      "bus_name": "Chittar",
+      "boarding_points": [
+        {
+          "sequence": 1,
+          "name": "PERIYAR NAGAR (School)",
+          "time": "06:00"
+        },
+        {
+          "sequence": 2,
+          "name": "T.V.K NAGAR (BS)",
+          "time": "06:03"
+        },
+        {
+          "sequence": 3,
+          "name": "PERAMBUR / DONBOSCO SCHOOL",
+          "time": "06:05"
+        },
+        {
+          "sequence": 4,
+          "name": "PERAMBUR / LAKSHMI AMMAN KOIL",
+          "time": "06:20"
+        },
+        {
+          "sequence": 5,
+          "name": "FIRE SERVICE STATION OPP",
+          "time": "06:22"
+        },
+        {
+          "sequence": 6,
+          "name": "VYASARPADI (AMBEDKAR COLLEGE)",
+          "time": "06:27"
+        },
+        {
+          "sequence": 7,
+          "name": "M.K.B NAGAR (CENTRAL AVENUE)",
+          "time": "06:35"
+        },
+        {
+          "sequence": 8,
+          "name": "MULLAI NAGAR",
+          "time": "06:37"
+        },
+        {
+          "sequence": 9,
+          "name": "VYASARPADI (PILLAR)",
+          "time": "06:40"
+        },
+        {
+          "sequence": 10,
+          "name": "VALLALAR NAGAR (MINT-BS)",
+          "time": "06:45"
+        },
+        {
+          "sequence": 11,
+          "name": "STANLEY HOSPITAL / THAMBU CHETTI",
+          "time": "06:48"
+        },
+        {
+          "sequence": 12,
+          "name": "BEACH STATION",
+          "time": "06:50"
+        },
+        {
+          "sequence": 13,
+          "name": "PARRYS CORNER (NEAR PETROL BUNK)",
+          "time": "06:52"
+        },
+        {
+          "sequence": 14,
+          "name": "KANNAGI STATUE",
+          "time": "06:55"
+        },
+        {
+          "sequence": 15,
+          "name": "V HOUSE",
+          "time": "06:57"
+        },
+        {
+          "sequence": 16,
+          "name": "LIGHT HOUSE",
+          "time": "07:00"
+        },
+        {
+          "sequence": 17,
+          "name": "SANTHOME",
+          "time": "07:02"
+        },
+        {
+          "sequence": 18,
+          "name": "MRC NAGAR",
+          "time": "07:05"
+        },
+        {
+          "sequence": 19,
+          "name": "HINDUSTAN UNIVERSITY CAMPUS",
+          "time": "08:00"
+        }
+      ],
+      "endpoint": "HINDUSTAN UNIVERSITY CAMPUS"
+    },
+    {
+      "route_number": "03",
+      "route_name": "Purasawakkam",
+      "bus_name": "Hemavathy",
+      "boarding_points": [
+        {
+          "sequence": 1,
+          "name": "NADHAMUNI",
+          "time": "06:30"
+        },
+        {
+          "sequence": 2,
+          "name": "VILLIVAKKAM",
+          "time": "06:32"
+        },
+        {
+          "sequence": 3,
+          "name": "ICF",
+          "time": "06:34"
+        },
+        {
+          "sequence": 4,
+          "name": "RAILWAY QUARTERS",
+          "time": "06:36"
+        },
+        {
+          "sequence": 5,
+          "name": "JOINT OFFICE",
+          "time": "06:38"
+        },
+        {
+          "sequence": 6,
+          "name": "NOOR HOTEL",
+          "time": "06:40"
+        },
+        {
+          "sequence": 7,
+          "name": "AYANAVARAM",
+          "time": "06:42"
+        },
+        {
+          "sequence": 8,
+          "name": "ESI HOSPITAL",
+          "time": "06:45"
+        },
+        {
+          "sequence": 9,
+          "name": "KELLIES",
+          "time": "06:47"
+        },
+        {
+          "sequence": 10,
+          "name": "ABIRAMI THEATRE",
+          "time": "06:50"
+        },
+        {
+          "sequence": 11,
+          "name": "PURASAVAKKAM TANK",
+          "time": "06:52"
+        },
+        {
+          "sequence": 12,
+          "name": "DOWTON",
+          "time": "06:55"
+        },
+        {
+          "sequence": 13,
+          "name": "VEPERY",
+          "time": "06:57"
+        },
+        {
+          "sequence": 14,
+          "name": "EVK SAMPATH ROAD",
+          "time": "07:00"
+        },
+        {
+          "sequence": 15,
+          "name": "DHINA THANDHI OFFICE",
+          "time": "07:02"
+        },
+        {
+          "sequence": 16,
+          "name": "ALBERT THEATRE",
+          "time": "07:05"
+        },
+        {
+          "sequence": 17,
+          "name": "EGMORE EYE HOSPITAL",
+          "time": "07:07"
+        },
+        {
+          "sequence": 18,
+          "name": "RAJARATHNAM STADIUM",
+          "time": "07:10"
+        },
+        {
+          "sequence": 19,
+          "name": "THOUSAND LIGHT",
+          "time": "07:15"
+        },
+        {
+          "sequence": 20,
+          "name": "GEMINI FLY OVER",
+          "time": "07:20"
+        },
+        {
+          "sequence": 21,
+          "name": "THENAMPET SIGNAL",
+          "time": "07:25"
+        },
+        {
+          "sequence": 22,
+          "name": "HINDUSTAN UNIVERSITY",
+          "time": "08:00"
+        }
+      ],
+      "endpoint": "HINDUSTAN UNIVERSITY"
+    },
+    {
+      "route_number": "04",
+      "route_name": "Poonamallee",
+      "bus_name": "Thames",
+      "boarding_points": [
+        {
+          "sequence": 1,
+          "name": "POONAMALLEE",
+          "time": "06:15"
+        },
+        {
+          "sequence": 2,
+          "name": "KATTUPAKKAM",
+          "time": "06:25"
+        },
+        {
+          "sequence": 3,
+          "name": "IYYAPPANTHANGAL",
+          "time": "06:30"
+        },
+        {
+          "sequence": 4,
+          "name": "PORUR (ROUNTANA)",
+          "time": "06:35"
+        },
+        {
+          "sequence": 5,
+          "name": "VALASARAWAKKAM - PANCHAYAT BOARD OFFICE (BATA COMPANY)",
+          "time": "06:45"
+        },
+        {
+          "sequence": 6,
+          "name": "ALWAR THIRUNAGAR & KESAVARTHINI",
+          "time": "06:47"
+        },
+        {
+          "sequence": 7,
+          "name": "VIRUGAMBAKKAM (Near B.S)",
+          "time": "06:50"
+        },
+        {
+          "sequence": 8,
+          "name": "AVICHI SCHOOL",
+          "time": "06:52"
+        },
+        {
+          "sequence": 9,
+          "name": "PONDICHERRY HOUSE (OPP.)",
+          "time": "06:55"
+        },
+        {
+          "sequence": 10,
+          "name": "NESAPAKKAM (TURNING)",
+          "time": "06:57"
+        },
+        {
+          "sequence": 11,
+          "name": "M.G.R NAGAR (Near B.S)",
+          "time": "07:00"
+        },
+        {
+          "sequence": 12,
+          "name": "K.K. NAGAR (ROUNTANA) / SARAVANA BHAVAN",
+          "time": "07:05"
+        },
+        {
+          "sequence": 13,
+          "name": "HINDUSTAN UNIVERSITY CAMPUS",
+          "time": "08:00"
+        }
+      ],
+      "endpoint": "HINDUSTAN UNIVERSITY CAMPUS"
+    },
+    {
+      "route_number": "05",
+      "route_name": "Tiruvottriyur",
+      "bus_name": "Gomti",
+      "boarding_points": [
+        {
+          "sequence": 1,
+          "name": "MULLAI NAGAR",
+          "time": "06:10"
+        },
+        {
+          "sequence": 2,
+          "name": "LIFT GATE ROUNTANA",
+          "time": "06:13"
+        },
+        {
+          "sequence": 3,
+          "name": "VIMCO NAGAR MARKET",
+          "time": "06:14"
+        },
+        {
+          "sequence": 4,
+          "name": "TIRUVOTTRIYUR (B.S.) AJACKS",
+          "time": "06:15"
+        },
+        {
+          "sequence": 5,
+          "name": "PERIYAR NAGAR (Near B.S.)",
+          "time": "06:17"
+        },
+        {
+          "sequence": 6,
+          "name": "TIRUVOTTRIYUR ELLAIAMMAN KOVIL",
+          "time": "06:20"
+        },
+        {
+          "sequence": 7,
+          "name": "KALADIPET MARKET",
+          "time": "06:25"
+        },
+        {
+          "sequence": 8,
+          "name": "TOLLGATE (Near B.S.)",
+          "time": "06:30"
+        },
+        {
+          "sequence": 9,
+          "name": "LAKSHMI KOIL B.S.",
+          "time": "06:33"
+        },
+        {
+          "sequence": 10,
+          "name": "TONDIARPET DEPOT",
+          "time": "06:35"
+        },
+        {
+          "sequence": 11,
+          "name": "CALRA HOSPITAL (Near B.S.)",
+          "time": "06:36"
+        },
+        {
+          "sequence": 12,
+          "name": "KASIMEDU",
+          "time": "06:38"
+        },
+        {
+          "sequence": 13,
+          "name": "KALMANDAPAM (B.S. - AFTER SIGNAL)",
+          "time": "06:40"
+        },
+        {
+          "sequence": 14,
+          "name": "ROYAPURAM MARKET B.S.",
+          "time": "06:43"
+        },
+        {
+          "sequence": 15,
+          "name": "PARRYS CORNER",
+          "time": "06:50"
+        },
+        {
+          "sequence": 16,
+          "name": "THIVOOTHIDAL",
+          "time": "06:55"
+        },
+        {
+          "sequence": 17,
+          "name": "THIRUVANMIYUR RTO",
+          "time": "07:25"
+        },
+        {
+          "sequence": 18,
+          "name": "INJAMPAKKAM KAILASH",
+          "time": "07:35"
+        },
+        {
+          "sequence": 19,
+          "name": "SHOLINGANALLUR WATER TANK",
+          "time": "07:40"
+        },
+        {
+          "sequence": 20,
+          "name": "HINDUSTAN UNIVERSITY CAMPUS",
+          "time": "08:00"
+        }
+      ],
+      "endpoint": "HINDUSTAN UNIVERSITY CAMPUS"
+    },
+    {
+      "route_number": "06",
+      "route_name": "Thiruvallur",
+      "bus_name": "Danube",
+      "boarding_points": [
+        {
+          "sequence": 1,
+          "name": "THIRUVALLUR",
+          "time": "05:55"
+        },
+        {
+          "sequence": 2,
+          "name": "MANAVALLA NAGAR",
+          "time": "06:10"
+        },
+        {
+          "sequence": 3,
+          "name": "PUDHUCHATTIRAM",
+          "time": "06:25"
+        },
+        {
+          "sequence": 4,
+          "name": "THIRUMAZHISAI",
+          "time": "06:35"
+        },
+        {
+          "sequence": 5,
+          "name": "PANIMALAR COLLEGE",
+          "time": "06:38"
+        },
+        {
+          "sequence": 6,
+          "name": "NAZARETHPETTAI",
+          "time": "06:40"
+        },
+        {
+          "sequence": 7,
+          "name": "SAVEETHA DENTAL HOSPITAL ENTRANCE",
+          "time": "06:45"
+        },
+        {
+          "sequence": 8,
+          "name": "VELAPPANCHAVADI",
+          "time": "06:50"
+        },
+        {
+          "sequence": 9,
+          "name": "VANAGARAM",
+          "time": "06:53"
+        },
+        {
+          "sequence": 10,
+          "name": "MADURAVOYAL BRIDGE",
+          "time": "06:55"
+        },
+        {
+          "sequence": 11,
+          "name": "TOLL PLAZA",
+          "time": "07:00"
+        },
+        {
+          "sequence": 12,
+          "name": "PERUNGALATHUR",
+          "time": "07:25"
+        },
+        {
+          "sequence": 13,
+          "name": "VANDALOOR OVER BRIDGE",
+          "time": "07:28"
+        },
+        {
+          "sequence": 14,
+          "name": "HINDUSTAN UNIVERSITY CAMPUS",
+          "time": "08:00"
+        }
+      ],
+      "endpoint": "HINDUSTAN UNIVERSITY CAMPUS"
+    },
+    {
+      "route_number": "07",
+      "route_name": "Red Hills (Via. Metha Nagar)",
+      "bus_name": "Krishna",
+      "boarding_points": [
+        {
+          "sequence": 1,
+          "name": "RED HILLS (B.S.)",
+          "time": "05:45"
+        },
+        {
+          "sequence": 2,
+          "name": "PUZHAL (OPP. JAIL)",
+          "time": "05:48"
+        },
+        {
+          "sequence": 3,
+          "name": "MADHAVARAM ROUNTANA",
+          "time": "06:02"
+        },
+        {
+          "sequence": 4,
+          "name": "RETTERY 100 FT. (AFTER SIGNAL)",
+          "time": "06:05"
+        },
+        {
+          "sequence": 5,
+          "name": "RELIANCE",
+          "time": "06:07"
+        },
+        {
+          "sequence": 6,
+          "name": "SENTHIL NAGAR",
+          "time": "06:09"
+        },
+        {
+          "sequence": 7,
+          "name": "THADHAN KUPPAM",
+          "time": "06:11"
+        },
+        {
+          "sequence": 8,
+          "name": "LUCAS BRIDGE",
+          "time": "06:13"
+        },
+        {
+          "sequence": 9,
+          "name": "NATHAMUNI (Near B.S.)",
+          "time": "06:30"
+        },
+        {
+          "sequence": 10,
+          "name": "K-4 POLICE STATION (Near)",
+          "time": "06:35"
+        },
+        {
+          "sequence": 11,
+          "name": "ANNA NAGAR ROUNTANA",
+          "time": "06:37"
+        },
+        {
+          "sequence": 12,
+          "name": "HOTEL ARUN",
+          "time": "06:40"
+        },
+        {
+          "sequence": 13,
+          "name": "METHA NAGAR (BATA)",
+          "time": "06:42"
+        },
+        {
+          "sequence": 14,
+          "name": "CHOOLAIMEDU",
+          "time": "06:44"
+        },
+        {
+          "sequence": 15,
+          "name": "STERLING ROAD / LOYOLA COLLEGE",
+          "time": "06:47"
+        },
+        {
+          "sequence": 16,
+          "name": "INDEPENDENCCE DAY PARK",
+          "time": "06:50"
+        },
+        {
+          "sequence": 17,
+          "name": "VALLUVAR KOTTAM",
+          "time": "06:51"
+        },
+        {
+          "sequence": 18,
+          "name": "VIVEK & CO., / T. NAGAR",
+          "time": "06:55"
+        },
+        {
+          "sequence": 19,
+          "name": "PONDY BAZZAR",
+          "time": "06:57"
+        },
+        {
+          "sequence": 20,
+          "name": "HINDUSTAN UNIVERSITY CAMPUS",
+          "time": "08:00"
+        }
+      ],
+      "endpoint": "HINDUSTAN UNIVERSITY CAMPUS"
+    },
+    {
+      "route_number": "08",
+      "route_name": "Anna Nagar",
+      "bus_name": "Ganga",
+      "boarding_points": [
+        {
+          "sequence": 1,
+          "name": "KORATTUR",
+          "time": "06:15"
+        },
+        {
+          "sequence": 2,
+          "name": "LUCAS (TVS)",
+          "time": "06:22"
+        },
+        {
+          "sequence": 3,
+          "name": "ANNA NAGAR (DEPOT)",
+          "time": "06:26"
+        },
+        {
+          "sequence": 4,
+          "name": "VR MALL - OPP. (B.S.)",
+          "time": "06:35"
+        },
+        {
+          "sequence": 5,
+          "name": "KOYAMBEDU - OPP. (B.S.)",
+          "time": "06:41"
+        },
+        {
+          "sequence": 6,
+          "name": "MMDA",
+          "time": "06:45"
+        },
+        {
+          "sequence": 7,
+          "name": "THIRU NAGAR",
+          "time": "06:51"
+        },
+        {
+          "sequence": 8,
+          "name": "VADAPALANI",
+          "time": "06:55"
+        },
+        {
+          "sequence": 9,
+          "name": "ASHOK PILLAR",
+          "time": "07:03"
+        },
+        {
+          "sequence": 10,
+          "name": "KASI THEATER",
+          "time": "07:05"
+        },
+        {
+          "sequence": 11,
+          "name": "EKKATTUTHANGAL",
+          "time": "07:11"
+        },
+        {
+          "sequence": 12,
+          "name": "ALANDUR COURT (OPP)",
+          "time": "07:15"
+        },
+        {
+          "sequence": 13,
+          "name": "SUSNSHINE SCHOOL, ADAMBAKKAM",
+          "time": "07:21"
+        },
+        {
+          "sequence": 14,
+          "name": "HINDUSTAN UNIVERSITY CAMPUS",
+          "time": "08:00"
+        }
+      ],
+      "endpoint": "HINDUSTAN UNIVERSITY CAMPUS"
+    },
+    {
+      "route_number": "09",
+      "route_name": "Mint – Triplicane (via.) Royapettah",
+      "bus_name": "Missouri",
+      "boarding_points": [
+        {
+          "sequence": 1,
+          "name": "CHEKPAUK",
+          "time": "06:50"
+        },
+        {
+          "sequence": 2,
+          "name": "TRIPLICANE / GHOSHA HOSPITAL",
+          "time": "06:55"
+        },
+        {
+          "sequence": 3,
+          "name": "ROYAPETTAH - (MANIKOONDU / P.S.)",
+          "time": "06:58"
+        },
+        {
+          "sequence": 4,
+          "name": "HOTEL AJANTHA",
+          "time": "07:00"
+        },
+        {
+          "sequence": 5,
+          "name": "LUZ CORNER",
+          "time": "07:02"
+        },
+        {
+          "sequence": 6,
+          "name": "MYLAPORE TANK",
+          "time": "07:05"
+        },
+        {
+          "sequence": 7,
+          "name": "MANDAVELI (POST OFFICE & DEPOT)",
+          "time": "07:07"
+        },
+        {
+          "sequence": 8,
+          "name": "HINDUSTAN UNIVERSITY CAMPUS",
+          "time": "08:00"
+        }
+      ],
+      "endpoint": "HINDUSTAN UNIVERSITY CAMPUS"
+    },
+    {
+      "route_number": "10",
+      "route_name": "Mylapore / Besant Nagar",
+      "bus_name": "Thapti",
+      "boarding_points": [
+        {
+          "sequence": 1,
+          "name": "PARK SHARTON HOTEL",
+          "time": "06:45"
+        },
+        {
+          "sequence": 2,
+          "name": "T.T.K. ROAD / DTDC COURIER",
+          "time": "06:47"
+        },
+        {
+          "sequence": 3,
+          "name": "ALWARPET ANJANEYAR KOIL",
+          "time": "06:50"
+        },
+        {
+          "sequence": 4,
+          "name": "OLIVER ROAD & LUZ BEFORE SIGNAL",
+          "time": "06:52"
+        },
+        {
+          "sequence": 5,
+          "name": "KUTCHERY ROAD (OPP. JAIN KOIL)",
+          "time": "06:55"
+        },
+        {
+          "sequence": 6,
+          "name": "SANTHOME (B.S.)",
+          "time": "06:57"
+        },
+        {
+          "sequence": 7,
+          "name": "FORESHORE ESTATE (BEFORE SIGNAL)",
+          "time": "06:58"
+        },
+        {
+          "sequence": 8,
+          "name": "MRC NAGAR (B.S.)",
+          "time": "07:00"
+        },
+        {
+          "sequence": 9,
+          "name": "SATHYA STUDIO JANAKI COLLEGE",
+          "time": "07:02"
+        },
+        {
+          "sequence": 10,
+          "name": "ADYAR AVIN",
+          "time": "07:05"
+        },
+        {
+          "sequence": 11,
+          "name": "BESANT NAGAR PILLAYAR KOIL",
+          "time": "07:09"
+        },
+        {
+          "sequence": 12,
+          "name": "FOOD WORLD",
+          "time": "07:11"
+        },
+        {
+          "sequence": 13,
+          "name": "VANNAN DURAI",
+          "time": "07:13"
+        },
+        {
+          "sequence": 14,
+          "name": "ADYAR RAMPRASAD HOTEL",
+          "time": "07:15"
+        },
+        {
+          "sequence": 15,
+          "name": "MARUTHESWARAR KOVIL SIGNAL",
+          "time": "07:20"
+        },
+        {
+          "sequence": 16,
+          "name": "THIRUVALLUVAR (B.S. STOP)",
+          "time": "07:22"
+        },
+        {
+          "sequence": 17,
+          "name": "HINDUSTAN UNIVERSITY CAMPUS",
+          "time": "08:00"
+        }
+      ],
+      "endpoint": "HINDUSTAN UNIVERSITY CAMPUS"
+    },
+    {
+      "route_number": "11",
+      "route_name": "T. Nagar",
+      "bus_name": "Bhavani",
+      "boarding_points": [
+        {
+          "sequence": 1,
+          "name": "ASHOK NAGAR (POLICE STATION) (IDBI BANK)",
+          "time": "06:35"
+        },
+        {
+          "sequence": 2,
+          "name": "POWER HOUSE (Near B.S.)",
+          "time": "06:42"
+        },
+        {
+          "sequence": 3,
+          "name": "LIBERTY (Near B.S.) MEEKAKSHI COLLEGE",
+          "time": "06:45"
+        },
+        {
+          "sequence": 4,
+          "name": "NORTH USMAN ROAD (Near BRIDGE DOWN B.S.)",
+          "time": "06:50"
+        },
+        {
+          "sequence": 5,
+          "name": "VIVEK & CO., (PETROL BUNK BAZULLAH ROAD)",
+          "time": "06:55"
+        },
+        {
+          "sequence": 6,
+          "name": "G.N. CHETTY ROAD",
+          "time": "06:58"
+        },
+        {
+          "sequence": 7,
+          "name": "KOTTURPURAM - ANNA LIBRARY",
+          "time": "07:00"
+        },
+        {
+          "sequence": 8,
+          "name": "MADHYA KAILASH",
+          "time": "07:05"
+        },
+        {
+          "sequence": 9,
+          "name": "SRP TOOLS",
+          "time": "07:10"
+        },
+        {
+          "sequence": 10,
+          "name": "KANDAN CHAVADI",
+          "time": "07:15"
+        },
+        {
+          "sequence": 11,
+          "name": "PERUNGUDI",
+          "time": "07:20"
+        },
+        {
+          "sequence": 12,
+          "name": "SEEVARAM (THORAIPAKKAM)",
+          "time": "07:30"
+        },
+        {
+          "sequence": 13,
+          "name": "METTUKUPPAM",
+          "time": "07:33"
+        },
+        {
+          "sequence": 14,
+          "name": "KANNAGI NAGAR (BEFORE SIGNAL)",
+          "time": "07:35"
+        },
+        {
+          "sequence": 15,
+          "name": "KARAPAKKAM",
+          "time": "07:40"
+        },
+        {
+          "sequence": 16,
+          "name": "SOLINGANALLUR",
+          "time": "07:45"
+        },
+        {
+          "sequence": 17,
+          "name": "HINDUSTAN UNIVERSITY CAMPUS",
+          "time": "08:00"
+        }
+      ],
+      "endpoint": "HINDUSTAN UNIVERSITY CAMPUS"
+    },
+    {
+      "route_number": "12",
+      "route_name": "West Mambalam / Velachery",
+      "bus_name": "Nile",
+      "boarding_points": [
+        {
+          "sequence": 1,
+          "name": "7TH AVENUE ASHOK NAGAR",
+          "time": "06:35"
+        },
+        {
+          "sequence": 2,
+          "name": "ARANGANAYAGAM SUBWAY",
+          "time": "06:38"
+        },
+        {
+          "sequence": 3,
+          "name": "AYOTHIYA MANDAPAM (B.S.)",
+          "time": "06:40"
+        },
+        {
+          "sequence": 4,
+          "name": "POSTAL COLONY (B.S.)",
+          "time": "06:43"
+        },
+        {
+          "sequence": 5,
+          "name": "CIT NAGAR",
+          "time": "06:45"
+        },
+        {
+          "sequence": 6,
+          "name": "SAIDAPET ARCH",
+          "time": "06:50"
+        },
+        {
+          "sequence": 7,
+          "name": "CHECKPOST (Near B.S.)",
+          "time": "06:55"
+        },
+        {
+          "sequence": 8,
+          "name": "GURUNANAK COLLEGE",
+          "time": "06:58"
+        },
+        {
+          "sequence": 9,
+          "name": "GRT",
+          "time": "07:01"
+        },
+        {
+          "sequence": 10,
+          "name": "WATER TANK",
+          "time": "07:04"
+        },
+        {
+          "sequence": 11,
+          "name": "VIJAYA NAGAR (Near B,S,)",
+          "time": "07:09"
+        },
+        {
+          "sequence": 12,
+          "name": "TANCY NAGAR (Near B.S.)",
+          "time": "07:12"
+        },
+        {
+          "sequence": 13,
+          "name": "BABY NAGAR (B.S.)",
+          "time": "07:15"
+        },
+        {
+          "sequence": 14,
+          "name": "TARAMANI JUNCTION (B.S.)",
+          "time": "07:20"
+        },
+        {
+          "sequence": 15,
+          "name": "HINDUSTAN UNIVERSITY CAMPUS",
+          "time": "08:00"
+        }
+      ],
+      "endpoint": "HINDUSTAN UNIVERSITY CAMPUS"
+    },
+    {
+      "route_number": "13",
+      "route_name": "Kundrathur / Tambaram",
+      "bus_name": "Congo",
+      "boarding_points": [
+        {
+          "sequence": 1,
+          "name": "PORUR (BOY SHOP)",
+          "time": "06:15"
+        },
+        {
+          "sequence": 2,
+          "name": "KOVUR",
+          "time": "06:25"
+        },
+        {
+          "sequence": 3,
+          "name": "KUNDRATHUR JUNCTION ROAD",
+          "time": "06:35"
+        },
+        {
+          "sequence": 4,
+          "name": "ANAGAPPATHUR",
+          "time": "06:50"
+        },
+        {
+          "sequence": 5,
+          "name": "IRATTAI PILLAIYAR KOVIL",
+          "time": "06:55"
+        },
+        {
+          "sequence": 6,
+          "name": "PAMMAL CHURCH",
+          "time": "07:00"
+        },
+        {
+          "sequence": 7,
+          "name": "PAMMAL PUTHTHU KOVIL",
+          "time": "07:05"
+        },
+        {
+          "sequence": 8,
+          "name": "AADU THOTTI PALLAVARAM",
+          "time": "07:10"
+        },
+        {
+          "sequence": 9,
+          "name": "PALLAVARAM JUNCTION",
+          "time": "07:12"
+        },
+        {
+          "sequence": 10,
+          "name": "VELS COLLEGE",
+          "time": "07:20"
+        },
+        {
+          "sequence": 11,
+          "name": "ECHANGADU",
+          "time": "07:23"
+        },
+        {
+          "sequence": 12,
+          "name": "MAMBAKKAM",
+          "time": "07:35"
+        },
+        {
+          "sequence": 13,
+          "name": "HINDUSTAN UNIVERSITY CAMPUS",
+          "time": "08:00"
+        }
+      ],
+      "endpoint": "HINDUSTAN UNIVERSITY CAMPUS"
+    },
+    {
+      "route_number": "14",
+      "route_name": "Madipakkam (via) Nanganallur",
+      "bus_name": "Godavari",
+      "boarding_points": [
+        {
+          "sequence": 1,
+          "name": "PALAVANTHANGAL SUB WAY",
+          "time": "06:50"
+        },
+        {
+          "sequence": 2,
+          "name": "CHIDAMBARAM STORE (TURNING)",
+          "time": "06:53"
+        },
+        {
+          "sequence": 3,
+          "name": "RANGA THEATRE",
+          "time": "06:55"
+        },
+        {
+          "sequence": 4,
+          "name": "POOMANI MAHAL",
+          "time": "06:57"
+        },
+        {
+          "sequence": 5,
+          "name": "YELURAMMAN KOVIL",
+          "time": "07:00"
+        },
+        {
+          "sequence": 6,
+          "name": "U.T.I BANK (TURNING)",
+          "time": "07:05"
+        },
+        {
+          "sequence": 7,
+          "name": "IYYAPPAN KOVIL (B.S.)",
+          "time": "07:07"
+        },
+        {
+          "sequence": 8,
+          "name": "PONNIYAMMAN KOVIL (Near B.S.)",
+          "time": "07:10"
+        },
+        {
+          "sequence": 9,
+          "name": "BALAIAH GARDEN (Near B.S. - Petrol Bunk)",
+          "time": "07:12"
+        },
+        {
+          "sequence": 10,
+          "name": "SADASIVAM NAGAR (Near B.S.)",
+          "time": "07:14"
+        },
+        {
+          "sequence": 11,
+          "name": "RAM NAGAR (Near B.S.)",
+          "time": "07:15"
+        },
+        {
+          "sequence": 12,
+          "name": "BALAJI NAGAR",
+          "time": "07:17"
+        },
+        {
+          "sequence": 13,
+          "name": "LATHA SUPER MARKET",
+          "time": "07:20"
+        },
+        {
+          "sequence": 14,
+          "name": "MORE MARKET",
+          "time": "07:22"
+        },
+        {
+          "sequence": 15,
+          "name": "PALLIKARANAI KULAM",
+          "time": "07:23"
+        },
+        {
+          "sequence": 16,
+          "name": "OIL MILL (STOP PALLIKARANAI)",
+          "time": "07:25"
+        },
+        {
+          "sequence": 17,
+          "name": "PALLIKARANAI HIGH SCHOOL",
+          "time": "07:26"
+        },
+        {
+          "sequence": 18,
+          "name": "JAYACHANDRAN TEXTILES",
+          "time": "07:28"
+        },
+        {
+          "sequence": 19,
+          "name": "MAMBAKKAM JUNCTION ROAD",
+          "time": "07:29"
+        },
+        {
+          "sequence": 20,
+          "name": "RAMCO CEMENT SITHALAPAKKAM",
+          "time": "07:31"
+        },
+        {
+          "sequence": 21,
+          "name": "SITHALAPAKKAM PETROL BUNK",
+          "time": "07:35"
+        },
+        {
+          "sequence": 22,
+          "name": "HINDUSTAN UNIVERSITY CAMPUS",
+          "time": "08:00"
+        }
+      ],
+      "endpoint": "HINDUSTAN UNIVERSITY CAMPUS"
+    },
+    {
+      "route_number": "15",
+      "route_name": "Madipakkam (via) Keelkatalai",
+      "bus_name": "Brahmaputra",
+      "boarding_points": [
+        {
+          "sequence": 1,
+          "name": "ALANDHUR COURT",
+          "time": "06:45"
+        },
+        {
+          "sequence": 2,
+          "name": "ALANDHUR SUB-WAY",
+          "time": "06:50"
+        },
+        {
+          "sequence": 3,
+          "name": "JEYALAKSHMI THEATRE",
+          "time": "06:52"
+        },
+        {
+          "sequence": 4,
+          "name": "LAKSHMI NAGAR",
+          "time": "06:54"
+        },
+        {
+          "sequence": 5,
+          "name": "SANTHOSH NAGAR",
+          "time": "06:56"
+        },
+        {
+          "sequence": 6,
+          "name": "VELACHERY METRO RAIL",
+          "time": "06:58"
+        },
+        {
+          "sequence": 7,
+          "name": "VANUVAMPET",
+          "time": "07:00"
+        },
+        {
+          "sequence": 8,
+          "name": "OIL MILL (Near B.S.)",
+          "time": "07:05"
+        },
+        {
+          "sequence": 9,
+          "name": "KUMARAN THEATRE (Near B.S.)",
+          "time": "07:07"
+        },
+        {
+          "sequence": 10,
+          "name": "GANESH NAGAR",
+          "time": "07:10"
+        },
+        {
+          "sequence": 11,
+          "name": "ANANDHA THEATRE",
+          "time": "07:12"
+        },
+        {
+          "sequence": 12,
+          "name": "KEELKATTALAI (ANDHRA BANK)",
+          "time": "07:15"
+        },
+        {
+          "sequence": 13,
+          "name": "VEERAMANI NAGAR (B.S.)",
+          "time": "07:17"
+        },
+        {
+          "sequence": 14,
+          "name": "KOVILAMPAKKAM (Near B.S.)",
+          "time": "07:20"
+        },
+        {
+          "sequence": 15,
+          "name": "VELLAKAL",
+          "time": "07:22"
+        },
+        {
+          "sequence": 16,
+          "name": "MEDAVAKKAM KOOT ROAD",
+          "time": "07:25"
+        },
+        {
+          "sequence": 17,
+          "name": "MEDAVAKKAM MARKET (Near SIGNAL)",
+          "time": "07:27"
+        },
+        {
+          "sequence": 18,
+          "name": "PUTHUPAKAM",
+          "time": "07:30"
+        },
+        {
+          "sequence": 19,
+          "name": "PERUMBAKKAM-I (Near B.S.)",
+          "time": "07:35"
+        },
+        {
+          "sequence": 20,
+          "name": "PERUMBAKKAM-II (Near B.S.)",
+          "time": "07:37"
+        },
+        {
+          "sequence": 21,
+          "name": "GLOBAL HOSPITAL",
+          "time": "07:40"
+        },
+        {
+          "sequence": 22,
+          "name": "HINDUSTAN UNIVERSITY CAMPUS",
+          "time": "08:00"
+        }
+      ],
+      "endpoint": "HINDUSTAN UNIVERSITY CAMPUS"
+    },
+    {
+      "route_number": "16",
+      "route_name": "Saidapet (ECR)",
+      "bus_name": "Narmada",
+      "boarding_points": [
+        {
+          "sequence": 1,
+          "name": "LITTLE MOUNT (Near B.S.)",
+          "time": "06:45"
+        },
+        {
+          "sequence": 2,
+          "name": "SAIDAPET (SUBWAY)",
+          "time": "06:48"
+        },
+        {
+          "sequence": 3,
+          "name": "G.R. COMPLEX",
+          "time": "06:50"
+        },
+        {
+          "sequence": 4,
+          "name": "NANDHANAM SIGNAL (RIGHT DEVAR STATUE)",
+          "time": "06:55"
+        },
+        {
+          "sequence": 5,
+          "name": "KOTTURPURAM PARK",
+          "time": "06:57"
+        },
+        {
+          "sequence": 6,
+          "name": "KOTTURPURAM A.M.M. SCHOOL",
+          "time": "06:59"
+        },
+        {
+          "sequence": 7,
+          "name": "ANNA UNIVERSITY",
+          "time": "07:00"
+        },
+        {
+          "sequence": 8,
+          "name": "IIT MAIN GATE",
+          "time": "07:05"
+        },
+        {
+          "sequence": 9,
+          "name": "MADYA KAILASH",
+          "time": "07:07"
+        },
+        {
+          "sequence": 10,
+          "name": "R.T.O. OFFICE THIRUVANMIYUR",
+          "time": "07:15"
+        },
+        {
+          "sequence": 11,
+          "name": "KOTTIVAKKAM (AKSHAYA JEWELLERY)",
+          "time": "07:18"
+        },
+        {
+          "sequence": 12,
+          "name": "PALAVAKKAM (PRIMARY SCHOOL)",
+          "time": "07:20"
+        },
+        {
+          "sequence": 13,
+          "name": "NEELANKARAI (DHANALAKSHMI STORE)",
+          "time": "07:25"
+        },
+        {
+          "sequence": 14,
+          "name": "VETTUVANKENI (AMBIKA HARDWARES)",
+          "time": "07:30"
+        },
+        {
+          "sequence": 15,
+          "name": "INJAMBAKKAM BUS STAND",
+          "time": "07:32"
+        },
+        {
+          "sequence": 16,
+          "name": "SHOLINGANALLUR WATER TANK",
+          "time": "07:40"
+        },
+        {
+          "sequence": 17,
+          "name": "HINDUSTAN UNIVERSITY CAMPUS",
+          "time": "08:00"
+        }
+      ],
+      "endpoint": "HINDUSTAN UNIVERSITY CAMPUS"
+    },
+    {
+      "route_number": "17",
+      "route_name": "Adyar",
+      "bus_name": "Thiruveni A/C Bus",
+      "boarding_points": [
+        {
+          "sequence": 1,
+          "name": "HHO",
+          "time": "06:50"
+        },
+        {
+          "sequence": 2,
+          "name": "GUINDY SUBWAY",
+          "time": "06:55"
+        },
+        {
+          "sequence": 3,
+          "name": "IIT - CLRI (B.S.)",
+          "time": "07:00"
+        },
+        {
+          "sequence": 4,
+          "name": "AMBIKA APPALAM SIGNAL",
+          "time": "07:05"
+        },
+        {
+          "sequence": 5,
+          "name": "ADYAR DEPOT (B.S.)",
+          "time": "07:08"
+        },
+        {
+          "sequence": 6,
+          "name": "THIRUVANMIYUR SIGNAL",
+          "time": "07:10"
+        },
+        {
+          "sequence": 7,
+          "name": "THIRUVANMIYUR - R.T.O",
+          "time": "07:12"
+        },
+        {
+          "sequence": 8,
+          "name": "PALAVAKKAM",
+          "time": "07:14"
+        },
+        {
+          "sequence": 9,
+          "name": "NEELANGKARAI",
+          "time": "07:20"
+        },
+        {
+          "sequence": 10,
+          "name": "V.G.P",
+          "time": "07:25"
+        },
+        {
+          "sequence": 11,
+          "name": "INJAMBAKKAM",
+          "time": "07:30"
+        },
+        {
+          "sequence": 12,
+          "name": "HINDUSTAN UNIVERSITY CAMPUS",
+          "time": "08:00"
+        }
+      ],
+      "endpoint": "HINDUSTAN UNIVERSITY CAMPUS"
+    },
+    {
+      "route_number": "18",
+      "route_name": "Tambaram (Camp Road) Via. Poondibazar - Court",
+      "bus_name": "Beas",
+      "boarding_points": [
+        {
+          "sequence": 1,
+          "name": "ALANTHUR BUS DEPOT",
+          "time": "06:35"
+        },
+        {
+          "sequence": 2,
+          "name": "MEENAMBAKKAM",
+          "time": "06:40"
+        },
+        {
+          "sequence": 3,
+          "name": "TIRISULAM (B.S.)",
+          "time": "06:45"
+        },
+        {
+          "sequence": 4,
+          "name": "CHROMPET (B.S.)",
+          "time": "06:55"
+        },
+        {
+          "sequence": 5,
+          "name": "INDHIRA COTTON MILL",
+          "time": "07:00"
+        },
+        {
+          "sequence": 6,
+          "name": "VARADHARAJA THEATRE (CHITLAPAKKAM)",
+          "time": "07:02"
+        },
+        {
+          "sequence": 7,
+          "name": "MADHA CHURCH",
+          "time": "07:05"
+        },
+        {
+          "sequence": 8,
+          "name": "MAHARAJA SHOPPING",
+          "time": "07:07"
+        },
+        {
+          "sequence": 9,
+          "name": "UCO BANK NEAR",
+          "time": "07:10"
+        },
+        {
+          "sequence": 10,
+          "name": "SANKARA SCHOOL",
+          "time": "07:12"
+        },
+        {
+          "sequence": 11,
+          "name": "CAMP ROAD (Near B.S.)",
+          "time": "07:20"
+        },
+        {
+          "sequence": 12,
+          "name": "VIJAYA NAGAR",
+          "time": "07:25"
+        },
+        {
+          "sequence": 13,
+          "name": "LATHA SUPER MARKET",
+          "time": "07:30"
+        },
+        {
+          "sequence": 14,
+          "name": "HINDUSTAN UNIVERSITY CAMPUS",
+          "time": "08:00"
+        }
+      ],
+      "endpoint": "HINDUSTAN UNIVERSITY CAMPUS"
+    },
+    {
+      "route_number": "19A",
+      "route_name": "Camp Road",
+      "bus_name": "Colombia",
+      "boarding_points": [
+        {
+          "sequence": 1,
+          "name": "SARAVANA STORES",
+          "time": "07:00"
+        },
+        {
+          "sequence": 2,
+          "name": "TB HOSPITAL",
+          "time": "07:02"
+        },
+        {
+          "sequence": 3,
+          "name": "MAHALAKSHMI NAGAR",
+          "time": "07:15"
+        },
+        {
+          "sequence": 4,
+          "name": "RAJAKILPAKKAM",
+          "time": "07:20"
+        },
+        {
+          "sequence": 5,
+          "name": "KAMARAJAPURAM",
+          "time": "07:22"
+        },
+        {
+          "sequence": 6,
+          "name": "SEMBAKKAM",
+          "time": "07:25"
+        },
+        {
+          "sequence": 7,
+          "name": "GOWRIWAKKAM",
+          "time": "07:30"
+        },
+        {
+          "sequence": 8,
+          "name": "SANTHOSA PURAM",
+          "time": "07:32"
+        },
+        {
+          "sequence": 9,
+          "name": "SITHALAPAKKAM",
+          "time": "07:35"
+        },
+        {
+          "sequence": 10,
+          "name": "KOVILANCHERI",
+          "time": "07:38"
+        },
+        {
+          "sequence": 11,
+          "name": "MAMBAKKAM",
+          "time": "07:45"
+        },
+        {
+          "sequence": 12,
+          "name": "HINDUSTAN UNIVERSITY CAMPUS",
+          "time": "08:00"
+        }
+      ],
+      "endpoint": "HINDUSTAN UNIVERSITY CAMPUS"
+    },
+    {
+      "route_number": "20",
+      "route_name": "Tambaram",
+      "bus_name": "Gambia",
+      "boarding_points": [
+        {
+          "sequence": 1,
+          "name": "PALLAVARAM (B.S.)",
+          "time": "06:55"
+        },
+        {
+          "sequence": 2,
+          "name": "SARAVANA STORES - CHROMPET",
+          "time": "07:00"
+        },
+        {
+          "sequence": 3,
+          "name": "CHROMPET (B.S.)",
+          "time": "07:05"
+        },
+        {
+          "sequence": 4,
+          "name": "SHAH STORES - CHROMPET",
+          "time": "07:07"
+        },
+        {
+          "sequence": 5,
+          "name": "MIT GATE",
+          "time": "07:10"
+        },
+        {
+          "sequence": 6,
+          "name": "SANITORIUM",
+          "time": "07:15"
+        },
+        {
+          "sequence": 7,
+          "name": "KADAPERI",
+          "time": "07:17"
+        },
+        {
+          "sequence": 8,
+          "name": "TAMBARAM RAILWAY GATE",
+          "time": "07:20"
+        },
+        {
+          "sequence": 9,
+          "name": "IRUMBILIYUR",
+          "time": "07:23"
+        },
+        {
+          "sequence": 10,
+          "name": "PERUNGALATHUR",
+          "time": "07:25"
+        },
+        {
+          "sequence": 11,
+          "name": "SADHANANTHA PURAM",
+          "time": "07:27"
+        },
+        {
+          "sequence": 12,
+          "name": "ALAPAKKAM",
+          "time": "07:29"
+        },
+        {
+          "sequence": 13,
+          "name": "EARIKARAI",
+          "time": "07:32"
+        },
+        {
+          "sequence": 14,
+          "name": "HINDUSTAN UNIVERSITY CAMPUS",
+          "time": "08:00"
+        }
+      ],
+      "endpoint": "HINDUSTAN UNIVERSITY CAMPUS"
+    },
+    {
+      "route_number": "21",
+      "route_name": "Kalpakkam",
+      "bus_name": "Yellowstone",
+      "boarding_points": [
+        {
+          "sequence": 1,
+          "name": "ECR ICE CAFE",
+          "time": "06:50"
+        },
+        {
+          "sequence": 2,
+          "name": "KALPAKKAM BUS STAND",
+          "time": "06:53"
+        },
+        {
+          "sequence": 3,
+          "name": "CHURCH",
+          "time": "06:55"
+        },
+        {
+          "sequence": 4,
+          "name": "SADRAS GATE",
+          "time": "06:57"
+        },
+        {
+          "sequence": 5,
+          "name": "FORT",
+          "time": "07:00"
+        },
+        {
+          "sequence": 6,
+          "name": "SADRAS CHURCH",
+          "time": "07:03"
+        },
+        {
+          "sequence": 7,
+          "name": "SADRAS ROUNTANA",
+          "time": "07:05"
+        },
+        {
+          "sequence": 8,
+          "name": "NATHAMEDU",
+          "time": "07:07"
+        },
+        {
+          "sequence": 9,
+          "name": "VENGAMPAKKAM",
+          "time": "07:10"
+        },
+        {
+          "sequence": 10,
+          "name": "BAVINI GATE",
+          "time": "07:13"
+        },
+        {
+          "sequence": 11,
+          "name": "ANUPURAM GATE",
+          "time": "07:15"
+        },
+        {
+          "sequence": 12,
+          "name": "GATE NO 8",
+          "time": "07:17"
+        },
+        {
+          "sequence": 13,
+          "name": "KUNNATHUR",
+          "time": "07:20"
+        },
+        {
+          "sequence": 14,
+          "name": "POONCHERRY KOOT ROAD",
+          "time": "07:35"
+        },
+        {
+          "sequence": 15,
+          "name": "TIRUPORUR (Near B.S.)",
+          "time": "07:45"
+        },
+        {
+          "sequence": 16,
+          "name": "HINDUSTAN UNIVERSITY CAMPUS",
+          "time": "08:00"
+        }
+      ],
+      "endpoint": "HINDUSTAN UNIVERSITY CAMPUS"
+    },
+    {
+      "route_number": "22",
+      "route_name": "Chengalpattu",
+      "bus_name": "Amaravathy",
+      "boarding_points": [
+        {
+          "sequence": 1,
+          "name": "NEW BUS STAND",
+          "time": "06:45"
+        },
+        {
+          "sequence": 2,
+          "name": "OLD BUS STAND",
+          "time": "06:47"
+        },
+        {
+          "sequence": 3,
+          "name": "BY PASS",
+          "time": "06:50"
+        },
+        {
+          "sequence": 4,
+          "name": "SINGAPERUMAL KOVIL",
+          "time": "07:05"
+        },
+        {
+          "sequence": 5,
+          "name": "MARAIMALAI NAGAR",
+          "time": "07:10"
+        },
+        {
+          "sequence": 6,
+          "name": "SRM COLLEGE (POTHERI)",
+          "time": "07:15"
+        },
+        {
+          "sequence": 7,
+          "name": "THAILAVARAM",
+          "time": "07:17"
+        },
+        {
+          "sequence": 8,
+          "name": "SRINIVASA PURAM",
+          "time": "07:20"
+        },
+        {
+          "sequence": 9,
+          "name": "GUDUVANCHERRY",
+          "time": "07:25"
+        },
+        {
+          "sequence": 10,
+          "name": "GUDUVANCHERRY EB",
+          "time": "07:27"
+        },
+        {
+          "sequence": 11,
+          "name": "URAPAKKAM TEA STALL",
+          "time": "07:30"
+        },
+        {
+          "sequence": 12,
+          "name": "URAPAKKAM SCHOOL",
+          "time": "07:32"
+        },
+        {
+          "sequence": 13,
+          "name": "VANDALOOR",
+          "time": "07:35"
+        },
+        {
+          "sequence": 14,
+          "name": "KANDIGAI",
+          "time": "07:42"
+        },
+        {
+          "sequence": 15,
+          "name": "HINDUSTAN UNIVERSITY CAMPUS",
+          "time": "08:00"
+        }
+      ],
+      "endpoint": "HINDUSTAN UNIVERSITY CAMPUS"
+    },
+    {
+      "route_number": "23",
+      "route_name": "Walajabad (Padappai)",
+      "bus_name": "Son",
+      "boarding_points": [
+        {
+          "sequence": 1,
+          "name": "WALAJABAD",
+          "time": "06:30"
+        },
+        {
+          "sequence": 2,
+          "name": "UTHUKADU KOOT ROAD",
+          "time": "06:38"
+        },
+        {
+          "sequence": 3,
+          "name": "KANDIGAI",
+          "time": "06:42"
+        },
+        {
+          "sequence": 4,
+          "name": "VEMBAKKAM",
+          "time": "06:48"
+        },
+        {
+          "sequence": 5,
+          "name": "ORAGADAM BUS STOP",
+          "time": "07:00"
+        },
+        {
+          "sequence": 6,
+          "name": "SERAPANACHERI BUS STOP",
+          "time": "07:10"
+        },
+        {
+          "sequence": 7,
+          "name": "PADAPPAI BUS STOP",
+          "time": "07:20"
+        },
+        {
+          "sequence": 8,
+          "name": "KARASANGAL BUS STOP",
+          "time": "07:25"
+        },
+        {
+          "sequence": 9,
+          "name": "MANIVAKKAM BUS STOP",
+          "time": "07:30"
+        },
+        {
+          "sequence": 10,
+          "name": "VANDALUR",
+          "time": "07:35"
+        },
+        {
+          "sequence": 11,
+          "name": "HINDUSTAN UNIVERSITY CAMPUS",
+          "time": "08:00"
+        }
+      ],
+      "endpoint": "HINDUSTAN UNIVERSITY CAMPUS"
+    }
   ]
 }

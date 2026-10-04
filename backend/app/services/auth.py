@@ -8,10 +8,18 @@ from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import jwt
+from argon2 import PasswordHasher
+from argon2.exceptions import VerifyMismatchError, VerificationError, InvalidHashError
 from fastapi import HTTPException
 from pymongo.errors import DuplicateKeyError
 
 logger = logging.getLogger(__name__)
+_hasher = PasswordHasher()
+_dummy_hash = _hasher.hash(secrets.token_urlsafe(32))
+
+
+def password_hash(password):
+    return _hasher.hash(password)
 
 SAFE_USER_FIELDS = (
     "_id", "email", "username", "full_name", "role", "department", "active",
@@ -29,6 +37,25 @@ class AuthService:
         if not settings.jwt_secret_key and settings.database_mode != "memory":
             raise RuntimeError("JWT_SECRET_KEY (at least 32 characters) is required for persistent operation")
         self.secret = settings.jwt_secret_key or secrets.token_urlsafe(48)
+
+    def login(self, identifier, password, client_id):
+        now = datetime.now(timezone.utc)
+        key = hashlib.sha256(f"{client_id}:{identifier.lower()}".encode()).hexdigest()
+        attempt = self.db.login_attempts.find_one({"_id": key})
+        if attempt and attempt["expires_at"] > now and attempt["count"] >= 10:
+            raise HTTPException(429, "Too many sign-in attempts. Try again in 15 minutes.")
+        user = self.db.users.find_one({"$or": [{"username": identifier.lower()}, {"email": identifier.lower()}]})
+        try:
+            valid = _hasher.verify((user or {}).get("password_hash") or _dummy_hash, password)
+        except (VerifyMismatchError, VerificationError, InvalidHashError):
+            valid = False
+        if not valid or not user or not user.get("active"):
+            self.db.login_attempts.update_one({"_id": key}, {"$inc": {"count": 1}, "$set": {"expires_at": now + timedelta(minutes=15)}}, upsert=True)
+            raise HTTPException(401, "Invalid credentials or inactive account")
+        self.db.login_attempts.delete_one({"_id": key})
+        self.db.users.update_one({"_id": user["_id"]}, {"$set": {"last_login_at": now}})
+        token, csrf, max_age = self.create_session(user)
+        return {"access_token": token, "csrf_token": csrf, "max_age": max_age, "user": user_public(user)}
 
     @staticmethod
     def _emails(value):
@@ -58,9 +85,8 @@ class AuthService:
             # Keep credentials out of logs; the exception message helps diagnose
             # malformed URLs, DNS failures, TLS problems, and timeouts.
             logger.warning(
-                "Supabase user verification connection failed (%s): %s",
+                "Supabase user verification connection failed (%s)",
                 type(error).__name__,
-                error,
             )
             raise HTTPException(503, "Could not reach the sign-in service. Please retry.") from None
 

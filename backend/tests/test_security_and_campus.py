@@ -25,7 +25,7 @@ def test_authentication_and_backend_roles(client, app):
     assert client.post("/vehicles", headers=headers, json={
         "number_plate": "TN09CD5432", "vehicle_type": "student", "owner_name": "Denied",
     }).status_code == 403
-    assert client.post("/detections/mock", headers=headers, json={"scenario": "student"}).status_code == 200
+    assert client.post("/detections/mock", headers=headers, json={"vehicle_id": "demo-student-1"}).status_code == 200
 
 
 def test_department_scope_and_user_admin(client, app):
