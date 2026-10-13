@@ -1,9 +1,12 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from starlette.concurrency import run_in_threadpool
 from app.api.auth import operator
 
 router = APIRouter(prefix="/anpr", tags=["ANPR"])
 MAX_IMAGE_BYTES = 8 * 1024 * 1024
+logger = logging.getLogger(__name__)
 
 
 def readiness(settings):
@@ -69,6 +72,9 @@ async def detect_image(request: Request, camera_id: str = Query(default="main-ga
             raise HTTPException(
                 503, "Real ANPR is not ready. " + readiness(request.app.state.settings)["message"]
             ) from None
+        except Exception:
+            logger.exception("Unexpected error during plate recognition")
+            raise HTTPException(503, "Plate recognition failed for this image. Please retry the scan.") from None
         return detections
 
     detections = await run_in_threadpool(recognize)
@@ -81,9 +87,15 @@ async def detect_image(request: Request, camera_id: str = Query(default="main-ga
         except Exception:
             raise HTTPException(503, "Scan storage is unavailable; no movement was recorded.") from None
         detections = [item.model_copy(update={"capture_key": object_key}) for item in detections]
-    results = await run_in_threadpool(
-        lambda: [request.app.state.processor.process(item, camera_id) for item in detections]
-    )
+    try:
+        results = await run_in_threadpool(
+            lambda: [request.app.state.processor.process(item, camera_id) for item in detections]
+        )
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to process plate scan results")
+        raise HTTPException(500, "The scan could not be recorded. Please retry.") from None
     for result in results:
         if result["outcome"] == "accepted":
             kind = "vehicle.entry" if result["log"]["status"] == "INSIDE" else "vehicle.exit"

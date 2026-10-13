@@ -168,7 +168,15 @@ export default function DemoControls({ notify, refresh, mockAi = true }) {
             body: blob,
           },
         );
-        const payload = await response.json();
+        const responseText = await response.text();
+        let payload;
+        try {
+          payload = responseText ? JSON.parse(responseText) : {};
+        } catch {
+          payload = {
+            detail: responseText || `Recognition failed (${response.status})`,
+          };
+        }
         if (!response.ok)
           throw new Error(
             payload.detail || `Recognition failed (${response.status})`,

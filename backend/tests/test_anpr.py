@@ -147,6 +147,21 @@ def test_image_endpoint_and_raw_evidence(app, client, vehicle):
     assert client.post("/anpr/detect", content=b"bad").status_code == 415
 
 
+def test_image_endpoint_returns_readable_error_when_recognition_crashes(app, client):
+    import cv2
+
+    class BrokenRecognizer:
+        def detect(self, frame):
+            raise ValueError("recognizer failure")
+
+    app.state.image_anpr = BrokenRecognizer()
+    encoded = cv2.imencode(".jpg", np.zeros((64, 100, 3), dtype=np.uint8))[1].tobytes()
+    response = client.post("/anpr/detect", content=encoded, headers={"Content-Type": "image/jpeg"})
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Plate recognition failed for this image. Please retry the scan."
+
+
 def test_confidence_threshold_with_valid_plate(app, client):
     detection = MockANPRService().detect("TN09AB1234")[0]
     detection.confidence = 0.79
