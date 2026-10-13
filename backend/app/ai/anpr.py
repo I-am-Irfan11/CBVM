@@ -180,6 +180,27 @@ class RealANPRService(ANPRService):
                 plate_boxes = [box for box in result.boxes
                                if str(self.model.names[int(box.cls[0])]).lower()
                                in {"indian_registered", "non_registered", "license_plate", "licence_plate", "plate"}]
+                character_boxes = [box for box in result.boxes
+                                   if str(self.model.names[int(box.cls[0])]).strip().upper()
+                                   in "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"]
+                # This model predicts both plate regions and individual characters.
+                # Prefer its character predictions inside each plate region over
+                # sending a low-resolution crop to a generic OCR engine.
+                if plate_boxes and character_boxes:
+                    ocr_fallback_boxes = []
+                    for plate_box in plate_boxes:
+                        px1, py1, px2, py2 = (int(v) for v in plate_box.xyxy[0].tolist())
+                        inside = [box for box in character_boxes
+                                  if px1 <= float(box.xyxy[0][0] + box.xyxy[0][2]) / 2 <= px2
+                                  and py1 <= float(box.xyxy[0][1] + box.xyxy[0][3]) / 2 <= py2]
+                        if inside:
+                            char_result = SimpleNamespace(boxes=inside, names=result.names)
+                            rows.extend(self._read_character_boxes(char_result, width, height, started))
+                        else:
+                            ocr_fallback_boxes.append(plate_box)
+                    if not ocr_fallback_boxes:
+                        continue
+                    plate_boxes = ocr_fallback_boxes
                 if not plate_boxes:
                     rows.extend(self._read_character_boxes(result, width, height, started))
                     continue
