@@ -313,13 +313,33 @@
   font-size: 13px;
 }
 .recognition-status {
-  border-top: 1px solid #d8e4ec;
-  padding-top: 12px;
+  max-width: 100%;
+  border: 1px solid #ecd7d3;
+  border-left: 3px solid #b54c42;
+  border-radius: 7px;
+  background: #fff9f7;
+  padding: 11px 14px;
   font-size: 12px;
+  overflow-wrap: anywhere;
 }
 .recognition-status summary {
   cursor: pointer;
   color: #a54039;
+  line-height: 1.45;
+}
+.recognition-status p {
+  margin: 8px 0 5px;
+  color: #657c89;
+  line-height: 1.55;
+}
+.recognition-status ul {
+  margin: 0;
+  padding-left: 18px;
+  color: #657c89;
+}
+.recognition-status li {
+  padding: 3px 0;
+  line-height: 1.5;
 }
 .console-page {
   animation: console-enter 160ms ease-out;
@@ -418,12 +438,13 @@
   }
 }
 .campus-bus-card {
-  overflow: hidden;
+  min-width: 0;
 }
 .campus-bus-heading {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 20px;
   padding: 2px 2px 16px;
 }
@@ -434,14 +455,20 @@
   margin: 0;
 }
 .campus-bus-table {
-  margin-inline: -22px;
+  margin-inline: 0;
+  max-width: 100%;
+  border: 1px solid #eaf0f4;
+  border-radius: 10px;
 }
 .campus-bus-table table {
-  min-width: 560px;
+  min-width: 0;
+  table-layout: fixed;
+  white-space: normal;
 }
 .campus-bus-table th,
 .campus-bus-table td {
-  padding: 11px 22px;
+  padding: 11px 14px;
+  overflow-wrap: anywhere;
 }
 .campus-bus-table td:first-child {
   font-weight: 650;
@@ -450,12 +477,6 @@
 .campus-bus-table td:nth-child(2) {
   font-variant-numeric: tabular-nums;
   color: #087f83;
-}
-.campus-bus-source {
-  display: inline-block;
-  margin-top: 12px;
-  color: #087f83;
-  font-size: 12px;
 }
 .transport-route {
   border-bottom: 1px solid #d9e2e7;
@@ -527,12 +548,10 @@
   font-size: 12px;
 }
 @media (max-width: 640px) {
-  .campus-bus-table {
-    margin-inline: -16px;
-  }
   .campus-bus-table th,
   .campus-bus-table td {
-    padding-inline: 16px;
+    padding: 9px 7px;
+    font-size: 11px;
   }
   .route-title {
     align-items: flex-start;

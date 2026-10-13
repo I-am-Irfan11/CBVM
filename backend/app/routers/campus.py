@@ -392,7 +392,8 @@ def analytics(request: Request, user=Depends(current_user), days: int = Query(30
 @router.get("/reports.csv")
 def export_report(request: Request, user=Depends(current_user), vehicle_type: VehicleType | None = None,
                   purpose: str | None = None, status: str | None = None,
-                  date_from: date | None = None, date_to: date | None = None):
+                  days: int = Query(30, ge=1, le=366), date_from: date | None = None,
+                  date_to: date | None = None):
     query = {}
     if vehicle_type:
         query["vehicle_type"] = vehicle_type
@@ -400,17 +401,17 @@ def export_report(request: Request, user=Depends(current_user), vehicle_type: Ve
         query["purpose"] = purpose
     if status:
         query["status"] = status
-    if date_from:
-        query["entry_time"] = {"$gte": datetime.combine(date_from, day_time.min, tzinfo=ZoneInfo(request.app.state.settings.campus_timezone)).astimezone(timezone.utc)}
-    if date_to:
-        if date_from and date_to < date_from:
-            raise HTTPException(422, "Start date must be before end date")
-        query.setdefault("entry_time", {})["$lt"] = datetime.combine(
-            date_to + timedelta(days=1), day_time.min, tzinfo=ZoneInfo(request.app.state.settings.campus_timezone)
-        ).astimezone(timezone.utc)
-    if "entry_time" in query:
-        window = query.pop("entry_time")
-        query["$or"] = [{"entry_time": window}, {"exit_time": window}]
+    if date_from and date_to and date_to < date_from:
+        raise HTTPException(422, "Start date must be before end date")
+    zone = ZoneInfo(request.app.state.settings.campus_timezone)
+    start = (datetime.combine(date_from, day_time.min, tzinfo=zone).astimezone(timezone.utc)
+             if date_from else utcnow() - timedelta(days=days))
+    end = (datetime.combine(date_to + timedelta(days=1), day_time.min, tzinfo=zone).astimezone(timezone.utc)
+           if date_to else utcnow())
+    if start >= end:
+        raise HTTPException(422, "Start date must be before end date")
+    window = {"$gte": start, "$lt": end}
+    query["$or"] = [{"entry_time": window}, {"exit_time": window}]
     rows = request.app.state.db.vehicle_logs.find(query).sort("entry_time", -1)
     output = io.StringIO(newline="")
     writer = csv.writer(output)

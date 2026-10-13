@@ -245,8 +245,13 @@ export default function DemoControls({ notify, refresh, mockAi = true }) {
         </p>
         {!mockAi && readiness && !readiness.ready ? (
           <details className="recognition-status">
-            <summary>Recognition needs setup · view details</summary>
-            <p>{(readiness.dependencies || []).join(" ")}</p>
+            <summary>Plate recognition is unavailable · view details</summary>
+            <p>The backend is missing these recognition components:</p>
+            <ul>
+              {(readiness.dependencies || []).map((dependency) => (
+                <li key={dependency}>{dependency}</li>
+              ))}
+            </ul>
           </details>
         ) : null}
       </div>

@@ -484,9 +484,50 @@ tbody tr:hover {
   justify-content: flex-end;
   margin-bottom: 16px;
 }
-.report-filters {
-  flex-wrap: wrap;
-  justify-content: flex-start;
+.toolbar.report-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr));
+  align-items: end;
+  gap: 14px 16px;
+  padding: 18px;
+  margin-bottom: 18px;
+  background: white;
+  border: 1px solid #dfe7ed;
+  border-radius: 10px;
+}
+.report-filters > label {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  min-width: 0;
+  color: #486a7f;
+  font-size: 12px;
+}
+.report-filters input,
+.report-filters select {
+  width: 100%;
+  min-width: 0;
+}
+.report-filters > .button {
+  width: 100%;
+  align-self: end;
+}
+.report-stat-card {
+  min-width: 0;
+  padding: 16px;
+}
+.report-stat-card .eyebrow {
+  margin: 0 0 10px;
+  font-size: 10px;
+  letter-spacing: 0.8px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.report-stat-card > strong {
+  display: block;
+  font-size: 23px;
+  line-height: 1.2;
 }
 .login-page {
   min-height: 60vh;

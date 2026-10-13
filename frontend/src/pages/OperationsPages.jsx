@@ -80,6 +80,7 @@ export default function OperationsPages({
   }
   async function download() {
     const query = new URLSearchParams();
+    query.set("days", String(days));
     if (vehicleType) query.set("vehicle_type", vehicleType);
     if (purpose) query.set("purpose", purpose);
     if (movementStatus) query.set("status", movementStatus);
@@ -177,7 +178,7 @@ export default function OperationsPages({
           </button>
         </div>
         <DataState state={analytics} retry={refresh}>
-          <div className="stats-grid">
+          <div className="stats-grid report-stats-grid">
             {[
               ["Movements", analytics.data?.movement_count],
               ["Visitors", analytics.data?.visitor_count],
@@ -189,7 +190,7 @@ export default function OperationsPages({
                   : duration(analytics.data.average_stay_seconds),
               ],
             ].map(([label, value]) => (
-              <Card key={label}>
+              <Card key={label} className="report-stat-card">
                 <div className="eyebrow">{label}</div>
                 <strong>{value ?? 0}</strong>
               </Card>
@@ -345,13 +346,9 @@ export default function OperationsPages({
         <Card className="campus-bus-card">
           <div className="campus-bus-heading">
             <div>
-              <div className="eyebrow">
-                Campus transport · published timetable
-              </div>
               <h2>College buses</h2>
               <p className="muted">
-                The 2023–24 college timetable names these buses and their
-                routes.
+                Campus routes and boarding stops.
               </p>
             </div>
             <Badge>{campusRoutes.length} routes</Badge>
@@ -370,14 +367,6 @@ export default function OperationsPages({
               },
             ]}
           />
-          <a
-            className="campus-bus-source"
-            href="https://hindustanuniv.ac.in/facilities/transport/"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Hindustan Institute transport timetable ↗
-          </a>
         </Card>
         {busOpen ? (
           <Card>
@@ -861,12 +850,6 @@ export default function OperationsPages({
                   { key: "time", label: "Morning time" },
                 ]}
               />
-              <p>
-                <a href={route.source_url} target="_blank" rel="noreferrer">
-                  College transport source
-                </a>{" "}
-                · {route.source_timetable_label}
-              </p>
             </details>
           ))}
         </Card>
