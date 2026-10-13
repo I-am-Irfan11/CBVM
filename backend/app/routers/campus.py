@@ -336,7 +336,7 @@ async def resolve_review(review_id: str, payload: ReviewAction, request: Request
                 raise HTTPException(409, "This vehicle is already inside")
             visitor_vehicle = VehicleCreate(
                 number_plate=plate, vehicle_type=payload.vehicle_type,
-                owner_name=payload.visitor_name, department=payload.host_department,
+                owner_name=payload.visitor_name,
             )
             vehicle = ops.update(existing["_id"], visitor_vehicle) if existing else ops.register(visitor_vehicle)
             direction = "IN"
@@ -360,14 +360,13 @@ async def resolve_review(review_id: str, payload: ReviewAction, request: Request
             visitor = {
                 "_id": str(uuid4()), "vehicle_id": vehicle["_id"], "number_plate": plate,
                 "visitor_name": payload.visitor_name, "organization": payload.organization,
-                "phone": payload.phone, "host_department": payload.host_department,
-                "person_to_visit": payload.person_to_visit, "expected_exit_time": None,
+                "phone": payload.phone, "expected_exit_time": None,
                 "purpose": payload.custom_purpose.strip() if payload.purpose == "Other" and payload.custom_purpose else payload.purpose,
                 "created_at": now, "created_by": user["_id"], "movement_id": movement["id"],
             }
             db.visitors.insert_one(visitor)
             audit(ops, "visitor.register", new={"visitor_id": visitor["_id"], "vehicle_id": vehicle["_id"],
-                "number_plate": plate, "purpose": visitor["purpose"], "host_department": payload.host_department,
+                "number_plate": plate, "purpose": visitor["purpose"],
                 "movement_id": movement["id"]})
     row = db.review_items.find_one_and_update({"_id": review_id, "status": "pending"}, {"$set": changes},
                                               return_document=ReturnDocument.AFTER)

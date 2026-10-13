@@ -68,3 +68,28 @@ def test_visitor_bus_reports_and_audit(client, app):
     assert client.get("/analytics").json()["visitor_count"] == 1
     assert client.get("/audit").status_code == 200
     assert any(item["action"] == "visitor.register" for item in client.get("/audit").json())
+
+
+def test_confirm_review_registers_visitor_without_removed_fields(client, app):
+    from app.ai.anpr import Detection
+
+    detection = Detection(
+        plate="KA03MN7890", raw_text="KA03MN7890", confidence=0.41,
+        bounding_box=(10, 10, 100, 50), valid=False, processing_time=0.1,
+        camera_id="main-gate-in", direction="IN", timestamp=datetime.now(timezone.utc),
+    )
+    review = app.state.processor.process(detection, "main-gate-in")["review"]
+    response = client.post(f"/reviews/{review['id']}/resolve", json={
+        "action": "confirm", "number_plate": "KA03MN7890", "visitor_name": "Test Visitor",
+        "phone": "9876543210", "organization": "Example Org", "purpose": "Guest Visit",
+        "direction": "IN",
+    })
+
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert result["movement"]["status"] == "INSIDE"
+    vehicle = app.state.db.vehicles.find_one({"number_plate": "KA03MN7890"})
+    assert vehicle and vehicle["owner_name"] == "Test Visitor"
+    visitor = app.state.db.visitors.find_one({"vehicle_id": vehicle["_id"]})
+    assert visitor and visitor["phone"] == "9876543210"
+    assert visitor["movement_id"] == result["movement"]["id"]

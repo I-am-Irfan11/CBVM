@@ -80,8 +80,6 @@ class ReviewAction(StrictModel):
     visitor_name: str | None = Field(default=None, max_length=100)
     phone: str | None = Field(default=None, max_length=30)
     organization: str | None = Field(default=None, max_length=120)
-    host_department: str | None = Field(default=None, max_length=100)
-    person_to_visit: str | None = Field(default=None, max_length=100)
     vehicle_type: Literal["visitor", "service", "emergency", "other"] = "visitor"
     direction: Literal["IN", "OUT"] = "IN"
     purpose: str = Field(default="Campus visit", min_length=1, max_length=240)
