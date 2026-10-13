@@ -1,11 +1,15 @@
+import json
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal
 from zoneinfo import ZoneInfo
 
 from pydantic import Field, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 ROOT = Path(__file__).resolve().parents[3]
+DEFAULT_CORS_ORIGINS = [
+    "http://localhost:5173", "http://127.0.0.1:5173", "https://cbvm.vercel.app",
+]
 
 
 class Settings(BaseSettings):
@@ -26,9 +30,7 @@ class Settings(BaseSettings):
     frame_sample_rate: float = Field(default=2, gt=0, le=60)
     run_video_worker: bool = False
     camera_id: str = "main-gate-in"
-    cors_origins: list[str] = [
-        "http://localhost:5173", "http://127.0.0.1:5173", "https://cbvm.vercel.app",
-    ]
+    cors_origins: Annotated[list[str], NoDecode] = DEFAULT_CORS_ORIGINS
     campus_timezone: str = "Asia/Kolkata"
     retention_days: int = Field(default=90, ge=1)
     jwt_secret_key: str | None = Field(default=None, min_length=32)
@@ -56,3 +58,23 @@ class Settings(BaseSettings):
     def timezone_exists(cls, value):
         ZoneInfo(value)
         return value
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, value):
+        if value is None:
+            return DEFAULT_CORS_ORIGINS
+        if isinstance(value, str):
+            raw = value.strip()
+            if not raw:
+                return DEFAULT_CORS_ORIGINS
+            if raw.startswith("["):
+                value = json.loads(raw)
+            else:
+                value = raw.split(",")
+        if isinstance(value, str):
+            value = [value]
+        if not isinstance(value, list):
+            raise ValueError("CORS_ORIGINS must be a JSON array or comma-separated origins")
+        origins = [str(origin).strip() for origin in value if str(origin).strip()]
+        return origins or DEFAULT_CORS_ORIGINS

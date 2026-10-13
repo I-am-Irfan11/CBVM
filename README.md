@@ -145,7 +145,7 @@ All backend variables are read from the repository-root .env regardless of worki
 | FRAME_SAMPLE_RATE | 2 sampled frames per second |
 | RUN_VIDEO_WORKER | false; opt in to continuous capture |
 | CAMERA_ID | main-gate-in; must exist in cameras |
-| CORS_ORIGINS | JSON array of frontend origins; also checked for WebSockets |
+| CORS_ORIGINS | Frontend origins as a JSON array or comma-separated list; also checked for WebSockets |
 | CAMPUS_TIMEZONE | Asia/Kolkata; day-boundary calculation |
 | RETENTION_DAYS | 90; completed/resolved records and audit retention |
 | FIREBASE_PROJECT_ID | Firebase project ID used to verify Firebase ID tokens on the backend |
