@@ -840,6 +840,19 @@ input::placeholder {
   margin: 0 0 18px;
   color: #718692;
 }
+.review-plate-status {
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  border-radius: 7px;
+  background: #f3f6f8;
+  color: #536b79;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.review-plate-status.registered {
+  background: #eaf6f3;
+  color: #17675f;
+}
 .review-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

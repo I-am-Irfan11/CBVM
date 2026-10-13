@@ -93,3 +93,11 @@ def test_confirm_review_registers_visitor_without_removed_fields(client, app):
     visitor = app.state.db.visitors.find_one({"vehicle_id": vehicle["_id"]})
     assert visitor and visitor["phone"] == "9876543210"
     assert visitor["movement_id"] == result["movement"]["id"]
+
+    next_review = app.state.processor.process(detection, "main-gate-in")["review"]
+    repeat = client.post(f"/reviews/{next_review['id']}/resolve", json={
+        "action": "confirm", "number_plate": "KA03MN7890", "purpose": "Maintenance",
+        "direction": "IN",
+    })
+    assert repeat.status_code == 200, repeat.text
+    assert app.state.db.vehicles.count_documents({"number_plate": "KA03MN7890"}) == 1

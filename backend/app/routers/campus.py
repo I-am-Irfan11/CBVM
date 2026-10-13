@@ -321,7 +321,9 @@ async def resolve_review(review_id: str, payload: ReviewAction, request: Request
         plate = normalize_plate(payload.number_plate or old.get("plate", ""))
         if not valid_plate(plate):
             raise HTTPException(422, "Correct the plate to a valid Indian registration")
-        vehicle = db.vehicles.find_one({"number_plate": plate, "status": "active"})
+        vehicle = db.vehicles.find_one({"number_plate": plate})
+        if vehicle and vehicle.get("status") != "active":
+            raise HTTPException(409, "This plate is already registered, but its vehicle is inactive. Reactivate it before confirming movement.")
         newly_registered_visitor = False
         if not vehicle:
             if not payload.visitor_name:
@@ -329,16 +331,11 @@ async def resolve_review(review_id: str, payload: ReviewAction, request: Request
             camera = db.cameras.find_one({"_id": old["camera_id"]})
             if not camera or camera.get("direction") not in ("IN", "BOTH"):
                 raise HTTPException(422, "An unregistered visitor plate can only be confirmed at an entry camera")
-            existing = db.vehicles.find_one({"number_plate": plate})
-            if existing and existing.get("vehicle_type") not in ("visitor", "service", "emergency", "other"):
-                raise HTTPException(409, "This plate belongs to a registered campus vehicle")
-            if existing and db.vehicle_logs.find_one({"vehicle_id": existing["_id"], "status": "INSIDE"}):
-                raise HTTPException(409, "This vehicle is already inside")
             visitor_vehicle = VehicleCreate(
                 number_plate=plate, vehicle_type=payload.vehicle_type,
                 owner_name=payload.visitor_name,
             )
-            vehicle = ops.update(existing["_id"], visitor_vehicle) if existing else ops.register(visitor_vehicle)
+            vehicle = ops.register(visitor_vehicle)
             direction = "IN"
             newly_registered_visitor = True
         else:
