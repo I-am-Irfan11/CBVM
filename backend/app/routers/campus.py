@@ -323,11 +323,27 @@ async def resolve_review(review_id: str, payload: ReviewAction, request: Request
             raise HTTPException(422, "Correct the plate to a valid Indian registration")
         vehicle = db.vehicles.find_one({"number_plate": plate, "status": "active"})
         if not vehicle:
-            raise HTTPException(404, "Register this vehicle or visitor before confirming the movement")
-        direction = old.get("direction") or "IN"
-        camera = db.cameras.find_one({"_id": old["camera_id"]})
-        if camera:
-            direction = camera["direction"] if camera["direction"] in ("IN", "OUT") else payload.direction
+            if not payload.visitor_name:
+                raise HTTPException(422, "Enter the visitor's name to register this plate and confirm entry")
+            camera = db.cameras.find_one({"_id": old["camera_id"]})
+            if not camera or camera.get("direction") not in ("IN", "BOTH"):
+                raise HTTPException(422, "An unregistered visitor plate can only be confirmed at an entry camera")
+            existing = db.vehicles.find_one({"number_plate": plate})
+            if existing and existing.get("vehicle_type") not in ("visitor", "service", "emergency", "other"):
+                raise HTTPException(409, "This plate belongs to a registered campus vehicle")
+            if existing and db.vehicle_logs.find_one({"vehicle_id": existing["_id"], "status": "INSIDE"}):
+                raise HTTPException(409, "This vehicle is already inside")
+            visitor_vehicle = VehicleCreate(
+                number_plate=plate, vehicle_type=payload.vehicle_type,
+                owner_name=payload.visitor_name, department=payload.host_department,
+            )
+            vehicle = ops.update(existing["_id"], visitor_vehicle) if existing else ops.register(visitor_vehicle)
+            direction = "IN"
+        else:
+            direction = old.get("direction") or "IN"
+            camera = db.cameras.find_one({"_id": old["camera_id"]})
+            if camera:
+                direction = camera["direction"] if camera["direction"] in ("IN", "OUT") else payload.direction
         result = ops.move(vehicle["_id"], direction,
                           Movement(camera_id=old["camera_id"], purpose=payload.purpose, custom_purpose=payload.custom_purpose,
                                    event_id=f"review:{review_id}",
@@ -336,6 +352,19 @@ async def resolve_review(review_id: str, payload: ReviewAction, request: Request
         changes["vehicle_id"] = vehicle["_id"]
         changes["corrected_plate"] = plate
         changes["custom_purpose"] = payload.custom_purpose if payload.purpose == "Other" else None
+        if payload.visitor_name:
+            visitor = {
+                "_id": str(uuid4()), "vehicle_id": vehicle["_id"], "number_plate": plate,
+                "visitor_name": payload.visitor_name, "organization": payload.organization,
+                "phone": payload.phone, "host_department": payload.host_department,
+                "person_to_visit": payload.person_to_visit, "expected_exit_time": None,
+                "purpose": payload.custom_purpose.strip() if payload.purpose == "Other" and payload.custom_purpose else payload.purpose,
+                "created_at": now, "created_by": user["_id"], "movement_id": movement["_id"],
+            }
+            db.visitors.insert_one(visitor)
+            audit(ops, "visitor.register", new={"visitor_id": visitor["_id"], "vehicle_id": vehicle["_id"],
+                "number_plate": plate, "purpose": visitor["purpose"], "host_department": payload.host_department,
+                "movement_id": movement["_id"]})
     row = db.review_items.find_one_and_update({"_id": review_id, "status": "pending"}, {"$set": changes},
                                               return_document=ReturnDocument.AFTER)
     audit(ops, f"review.{payload.action}", old, row)

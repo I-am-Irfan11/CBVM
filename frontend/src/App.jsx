@@ -198,7 +198,7 @@ export default function App() {
     setPending(true);
     try {
       await api(`/reviews/${id}/dismiss`, { method: "POST" });
-      notify("Review dismissed. No vehicle movement was recorded.");
+      notify("Vehicle rejected. No movement was recorded.");
       refresh();
     } catch (error) {
       notify(error.message, true);
@@ -563,10 +563,9 @@ export default function App() {
             {page === "reviews" ? (
               <>
                 <div className="info-note">
-                  Review foundation: inspect the original reading, register a
-                  verified vehicle in the registry, and record its movement
-                  manually. Dismissing a review does not record an entry or
-                  exit.
+                  Confirm / correct records a movement for a registered
+                  vehicle. Reject closes the review without recording a
+                  movement. Register unknown vehicles as visitors first.
                 </div>
                 <Card>
                   <DataState state={view} retry={refresh}>
@@ -633,7 +632,7 @@ export default function App() {
                                 disabled={pending}
                                 onClick={() => dismissReview(row.id)}
                               >
-                                Reject
+                                Reject vehicle
                               </button>
                             </div>
                           ),

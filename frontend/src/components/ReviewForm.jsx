@@ -25,6 +25,11 @@ export default function ReviewForm({ review, close, notify, refresh }) {
   const [purpose, setPurpose] = useState("Guest Visit");
   const [direction, setDirection] = useState("IN");
   const [custom, setCustom] = useState("");
+  const [visitorName, setVisitorName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [organization, setOrganization] = useState("");
+  const [hostDepartment, setHostDepartment] = useState("");
+  const [personToVisit, setPersonToVisit] = useState("");
   const [pending, setPending] = useState(false);
   const [scanUrl, setScanUrl] = useState("");
   useEffect(() => {
@@ -46,11 +51,23 @@ export default function ReviewForm({ review, close, notify, refresh }) {
   async function resolve(action) {
     setPending(true);
     try {
+      if (action === "reject") {
+        await api(`/reviews/${review.id}/dismiss`, { method: "POST" });
+        notify("Reading rejected. No vehicle movement was recorded.");
+        refresh();
+        close();
+        return;
+      }
       await api(`/reviews/${review.id}/resolve`, {
         method: "POST",
         body: {
           action,
           number_plate: plate,
+          visitor_name: visitorName || null,
+          phone: phone || null,
+          organization: organization || null,
+          host_department: hostDepartment || null,
+          person_to_visit: personToVisit || null,
           purpose,
           direction,
           custom_purpose: custom || null,
@@ -90,6 +107,27 @@ export default function ReviewForm({ review, close, notify, refresh }) {
           required
         />
       </label>
+      <p className="modal-description">For an unregistered visitor vehicle, enter their details here. Confirming will register the plate and record entry.</p>
+      <label className="review-field">
+        Visitor name
+        <input value={visitorName} onChange={(e) => setVisitorName(e.target.value)} />
+      </label>
+      <label className="review-field">
+        Phone (optional)
+        <input value={phone} onChange={(e) => setPhone(e.target.value)} />
+      </label>
+      <label className="review-field">
+        Organization (optional)
+        <input value={organization} onChange={(e) => setOrganization(e.target.value)} />
+      </label>
+      <label className="review-field">
+        Host department (optional)
+        <input value={hostDepartment} onChange={(e) => setHostDepartment(e.target.value)} />
+      </label>
+      <label className="review-field">
+        Person to visit (optional)
+        <input value={personToVisit} onChange={(e) => setPersonToVisit(e.target.value)} />
+      </label>
       <label className="review-field">
         Purpose
         <select value={purpose} onChange={(e) => setPurpose(e.target.value)}>
@@ -124,7 +162,7 @@ export default function ReviewForm({ review, close, notify, refresh }) {
           disabled={pending}
           onClick={() => resolve("reject")}
         >
-          Reject reading
+          Reject vehicle
         </button>
         <button
           className="button"
