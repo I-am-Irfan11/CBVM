@@ -417,6 +417,126 @@
     transition: none !important;
   }
 }
-.transport-route { padding: 18px 0; border-bottom: 1px solid var(--border, #d9e2e7); }
-.transport-route summary { cursor: pointer; font-weight: 600; padding: 8px 0; }
-.transport-route p { font-size: 13px; }
+.campus-bus-card {
+  overflow: hidden;
+}
+.campus-bus-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 2px 2px 16px;
+}
+.campus-bus-heading h2 {
+  margin: 5px 0 4px;
+}
+.campus-bus-heading p {
+  margin: 0;
+}
+.campus-bus-table {
+  margin-inline: -22px;
+}
+.campus-bus-table table {
+  min-width: 560px;
+}
+.campus-bus-table th,
+.campus-bus-table td {
+  padding: 11px 22px;
+}
+.campus-bus-table td:first-child {
+  font-weight: 650;
+  color: #183544;
+}
+.campus-bus-table td:nth-child(2) {
+  font-variant-numeric: tabular-nums;
+  color: #087f83;
+}
+.campus-bus-source {
+  display: inline-block;
+  margin-top: 12px;
+  color: #087f83;
+  font-size: 12px;
+}
+.transport-route {
+  border-bottom: 1px solid #d9e2e7;
+}
+.transport-route:first-of-type {
+  border-top: 1px solid #d9e2e7;
+}
+.transport-route summary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 58px;
+  padding: 9px 12px;
+  cursor: pointer;
+  list-style: none;
+}
+.transport-route summary::-webkit-details-marker {
+  display: none;
+}
+.transport-route summary::before {
+  content: "+";
+  display: grid;
+  place-items: center;
+  width: 23px;
+  height: 23px;
+  border: 1px solid #cad8de;
+  border-radius: 50%;
+  color: #087f83;
+  font-size: 16px;
+  line-height: 1;
+}
+.transport-route[open] summary::before {
+  content: "−";
+}
+.transport-route summary:hover {
+  background: #f4f8f9;
+}
+.route-number {
+  color: #087f83;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+.route-title {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  flex: 1;
+}
+.route-title strong {
+  color: #183544;
+  font-size: 14px;
+}
+.route-title small {
+  color: #71818a;
+  font-size: 12px;
+}
+.route-stop-count {
+  color: #71818a;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.transport-route .table-scroll {
+  margin: 0 12px 10px 49px;
+}
+.transport-route p {
+  margin: 4px 12px 14px 49px;
+  color: #71818a;
+  font-size: 12px;
+}
+@media (max-width: 640px) {
+  .campus-bus-table {
+    margin-inline: -16px;
+  }
+  .campus-bus-table th,
+  .campus-bus-table td {
+    padding-inline: 16px;
+  }
+  .route-title {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
+  }
+}

@@ -1,0 +1,140 @@
+[
+  {
+    "route_number": "01",
+    "route_name": "Avadi",
+    "bus_name": "Meghna",
+    "stop_count": 13
+  },
+  {
+    "route_number": "02",
+    "route_name": "Periyar Nagar",
+    "bus_name": "Chittar",
+    "stop_count": 19
+  },
+  {
+    "route_number": "03",
+    "route_name": "Purasawakkam",
+    "bus_name": "Hemavathy",
+    "stop_count": 22
+  },
+  {
+    "route_number": "04",
+    "route_name": "Poonamallee",
+    "bus_name": "Thames",
+    "stop_count": 13
+  },
+  {
+    "route_number": "05",
+    "route_name": "Tiruvottriyur",
+    "bus_name": "Gomti",
+    "stop_count": 20
+  },
+  {
+    "route_number": "06",
+    "route_name": "Thiruvallur",
+    "bus_name": "Danube",
+    "stop_count": 14
+  },
+  {
+    "route_number": "07",
+    "route_name": "Red Hills (Via. Metha Nagar)",
+    "bus_name": "Krishna",
+    "stop_count": 20
+  },
+  {
+    "route_number": "08",
+    "route_name": "Anna Nagar",
+    "bus_name": "Ganga",
+    "stop_count": 14
+  },
+  {
+    "route_number": "09",
+    "route_name": "Mint – Triplicane (via.) Royapettah",
+    "bus_name": "Missouri",
+    "stop_count": 8
+  },
+  {
+    "route_number": "10",
+    "route_name": "Mylapore / Besant Nagar",
+    "bus_name": "Thapti",
+    "stop_count": 17
+  },
+  {
+    "route_number": "11",
+    "route_name": "T. Nagar",
+    "bus_name": "Bhavani",
+    "stop_count": 17
+  },
+  {
+    "route_number": "12",
+    "route_name": "West Mambalam / Velachery",
+    "bus_name": "Nile",
+    "stop_count": 15
+  },
+  {
+    "route_number": "13",
+    "route_name": "Kundrathur / Tambaram",
+    "bus_name": "Congo",
+    "stop_count": 13
+  },
+  {
+    "route_number": "14",
+    "route_name": "Madipakkam (via) Nanganallur",
+    "bus_name": "Godavari",
+    "stop_count": 22
+  },
+  {
+    "route_number": "15",
+    "route_name": "Madipakkam (via) Keelkatalai",
+    "bus_name": "Brahmaputra",
+    "stop_count": 22
+  },
+  {
+    "route_number": "16",
+    "route_name": "Saidapet (ECR)",
+    "bus_name": "Narmada",
+    "stop_count": 17
+  },
+  {
+    "route_number": "17",
+    "route_name": "Adyar",
+    "bus_name": "Thiruveni A/C Bus",
+    "stop_count": 12
+  },
+  {
+    "route_number": "18",
+    "route_name": "Tambaram (Camp Road) Via. Poondibazar - Court",
+    "bus_name": "Beas",
+    "stop_count": 14
+  },
+  {
+    "route_number": "19A",
+    "route_name": "Camp Road",
+    "bus_name": "Colombia",
+    "stop_count": 12
+  },
+  {
+    "route_number": "20",
+    "route_name": "Tambaram",
+    "bus_name": "Gambia",
+    "stop_count": 14
+  },
+  {
+    "route_number": "21",
+    "route_name": "Kalpakkam",
+    "bus_name": "Yellowstone",
+    "stop_count": 16
+  },
+  {
+    "route_number": "22",
+    "route_name": "Chengalpattu",
+    "bus_name": "Amaravathy",
+    "stop_count": 15
+  },
+  {
+    "route_number": "23",
+    "route_name": "Walajabad (Padappai)",
+    "bus_name": "Son",
+    "stop_count": 11
+  }
+]

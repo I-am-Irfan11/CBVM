@@ -48,9 +48,10 @@ export function Table({
   rows,
   empty = "No records yet.",
   rowKey = "id",
+  className = "",
 }) {
   return (
-    <div className="table-scroll">
+    <div className={`table-scroll ${className}`.trim()}>
       <table>
         <thead>
           <tr>

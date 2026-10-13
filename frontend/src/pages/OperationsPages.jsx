@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { api, API_URL } from "../services/api";
 import { useApi } from "../hooks/useApi";
+import publishedCollegeBuses from "../collegeBuses.json";
 import {
   Badge,
   Card,
@@ -54,6 +55,9 @@ export default function OperationsPages({
     0,
   );
   const routes = useApi(page === "buses" ? "/transport/routes" : null, 0);
+  const campusRoutes = routes.data?.length
+    ? routes.data
+    : publishedCollegeBuses;
   const analytics = useApi(
     page === "reports"
       ? `/analytics?days=${days}${vehicleType ? `&vehicle_type=${encodeURIComponent(vehicleType)}` : ""}${purpose ? `&purpose=${encodeURIComponent(purpose)}` : ""}${movementStatus ? `&status=${movementStatus}` : ""}${dateFrom ? `&date_from=${dateFrom}` : ""}${dateTo ? `&date_to=${dateTo}` : ""}`
@@ -237,7 +241,8 @@ export default function OperationsPages({
           <Card>
             <h2>Record a vehicle arrival</h2>
             <p className="muted">
-              Students and staff already in the registry should use Scan plate. No organization is needed here.
+              Students and staff already in the registry should use Scan plate.
+              No organization is needed here.
             </p>
             <form
               className="ops-form"
@@ -337,20 +342,42 @@ export default function OperationsPages({
             </button>
           </div>
         ) : null}
-        <Card>
-          <h2>College buses in the published timetable</h2>
-          <p className="muted">
-            The timetable lists route bus names only. Add each vehicle’s actual registration plate in Vehicle registry before recording trips.
-          </p>
+        <Card className="campus-bus-card">
+          <div className="campus-bus-heading">
+            <div>
+              <div className="eyebrow">
+                Campus transport · published timetable
+              </div>
+              <h2>College buses</h2>
+              <p className="muted">
+                The 2023–24 college timetable names these buses and their
+                routes.
+              </p>
+            </div>
+            <Badge>{campusRoutes.length} routes</Badge>
+          </div>
           <Table
-            rows={routes.data || []}
-            empty="College route timetable is loading or unavailable."
+            className="campus-bus-table"
+            rows={campusRoutes}
             columns={[
-              { key: "bus_name", label: "College bus name" },
+              { key: "bus_name", label: "Bus" },
               { key: "route_number", label: "Route" },
               { key: "route_name", label: "Area" },
+              {
+                key: "boarding_points",
+                label: "Stops",
+                render: (row) => row.stop_count ?? "—",
+              },
             ]}
           />
+          <a
+            className="campus-bus-source"
+            href="https://hindustanuniv.ac.in/facilities/transport/"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Hindustan Institute transport timetable ↗
+          </a>
         </Card>
         {busOpen ? (
           <Card>
@@ -394,10 +421,18 @@ export default function OperationsPages({
               </label>
               <label>
                 Route
-                <input name="route" list="college-routes" placeholder="Select or enter a route" required />
+                <input
+                  name="route"
+                  list="college-routes"
+                  placeholder="Select or enter a route"
+                  required
+                />
                 <datalist id="college-routes">
                   {(routes.data || []).map((route) => (
-                    <option key={route.id} value={`${route.route_number} · ${route.route_name}`} />
+                    <option
+                      key={route.id}
+                      value={`${route.route_number} · ${route.route_name}`}
+                    />
                   ))}
                 </datalist>
               </label>
@@ -803,16 +838,35 @@ export default function OperationsPages({
     return (
       <DataState state={state} retry={refresh}>
         <Card>
-          {(state.data || []).length === 0 ? <p>No college routes have been imported yet.</p> : null}
+          {(state.data || []).length === 0 ? (
+            <p>No college routes have been imported yet.</p>
+          ) : null}
           {(state.data || []).map((route) => (
             <details key={route.id} className="transport-route">
-              <summary>{route.route_number} · {route.route_name} — {route.bus_name}</summary>
-              <Table rows={route.boarding_points || []} columns={[
-                { key: "sequence", label: "Stop" },
-                { key: "name", label: "Boarding point" },
-                { key: "time", label: "Morning time" },
-              ]} />
-              <p><a href={route.source_url} target="_blank" rel="noreferrer">College transport source</a> · {route.source_timetable_label}</p>
+              <summary>
+                <span className="route-number">{route.route_number}</span>
+                <span className="route-title">
+                  <strong>{route.route_name}</strong>
+                  <small>{route.bus_name}</small>
+                </span>
+                <span className="route-stop-count">
+                  {route.boarding_points?.length || 0} stops
+                </span>
+              </summary>
+              <Table
+                rows={route.boarding_points || []}
+                columns={[
+                  { key: "sequence", label: "Stop" },
+                  { key: "name", label: "Boarding point" },
+                  { key: "time", label: "Morning time" },
+                ]}
+              />
+              <p>
+                <a href={route.source_url} target="_blank" rel="noreferrer">
+                  College transport source
+                </a>{" "}
+                · {route.source_timetable_label}
+              </p>
             </details>
           ))}
         </Card>
