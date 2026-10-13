@@ -88,7 +88,8 @@ export default function ReviewForm({ review, close, notify, refresh }) {
   }
   return (
     <Modal title="Review detected reading" close={close}>
-      <p className="modal-description">
+      <div className="review-content">
+      <p className="modal-description review-ocr">
         Raw OCR: <strong>{review.raw_text || "No text"}</strong> · confidence{" "}
         {Math.round(review.confidence * 100)}% · {review.reason}
       </p>
@@ -99,15 +100,20 @@ export default function ReviewForm({ review, close, notify, refresh }) {
           alt={`Plate scan from ${review.camera_id}`}
         />
       ) : null}
-      <label className="review-field">
-        Corrected registration plate
+      <label className="review-field review-plate">
+        Type or correct registration plate
         <input
           value={plate}
           onChange={(e) => setPlate(e.target.value.toUpperCase())}
+          autoComplete="off"
+          autoCapitalize="characters"
+          spellCheck={false}
+          placeholder="e.g. TN09AB1234"
           required
         />
       </label>
-      <p className="modal-description">For an unregistered visitor vehicle, enter their details here. Confirming will register the plate and record entry.</p>
+      <p className="modal-description review-hint">For an unregistered visitor vehicle, add their details. Confirming will register the plate and record entry.</p>
+      <div className="review-grid">
       <label className="review-field">
         Visitor name
         <input value={visitorName} onChange={(e) => setVisitorName(e.target.value)} />
@@ -156,6 +162,8 @@ export default function ReviewForm({ review, close, notify, refresh }) {
           />
         </label>
       ) : null}
+      </div>
+      </div>
       <div className="form-actions">
         <button
           className="button secondary"

@@ -817,12 +817,52 @@ input::placeholder {
 .modal {
   margin: auto;
   padding: 27px;
-  width: min(550px, calc(100vw - 30px));
+  width: min(720px, calc(100vw - 30px));
   max-height: 90vh;
   border: 1px solid #dbe6ec;
   border-radius: 12px;
   color: #263e4e;
   box-shadow: 0 20px 90px #163b5233;
+}
+.review-content {
+  max-height: calc(90vh - 145px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.review-ocr {
+  margin: 0 0 18px;
+  color: #617887;
+}
+.review-plate {
+  margin-bottom: 14px;
+}
+.review-hint {
+  margin: 0 0 18px;
+  color: #718692;
+}
+.review-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.review-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  color: #405968;
+  font-size: 12px;
+  font-weight: 600;
+}
+.review-field input,
+.review-field select {
+  width: 100%;
+  min-width: 0;
+}
+.review-plate input {
+  font-family: Consolas, monospace;
+  font-size: 16px;
+  letter-spacing: 0.04em;
 }
 .modal::backdrop {
   background: #102c4670;
@@ -855,6 +895,18 @@ input::placeholder {
   justify-content: flex-end;
   gap: 10px;
   margin-top: 28px;
+}
+@media (max-width: 600px) {
+  .modal:has(.review-content) {
+    padding: 20px;
+  }
+  .review-grid {
+    grid-template-columns: 1fr;
+    gap: 13px;
+  }
+  .review-content {
+    max-height: calc(90vh - 125px);
+  }
 }
 .form-error {
   color: #a54039;
