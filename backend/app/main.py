@@ -12,6 +12,7 @@ from app.ai.anpr import MockANPRService, RealANPRService
 from app.core.config import Settings
 from app.database.connection import connect
 from app.database.seed import seed
+from app.database.transport import SNAPSHOT, seed_transport
 from app.routers import anpr, dashboard, vehicles, campus, auth
 from app.services.auth import AuthService
 from app.services.capture import CaptureWorker
@@ -71,6 +72,8 @@ def create_app(settings: Settings | None = None):
                 settings.retention_days = saved_retention["retention_days"]
             if settings.seed_on_startup:
                 await run_in_threadpool(seed, db, settings)
+            elif SNAPSHOT.exists() and not db.transport_routes.find_one({}):
+                await run_in_threadpool(seed_transport, db)
             app.state.operations = Operations(db, settings)
             app.state.scan_storage = ScanStorage(settings)
             app.state.processor = DetectionProcessor(app.state.operations)

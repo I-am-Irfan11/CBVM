@@ -1,8 +1,8 @@
 # Real ANPR model boundary
 
-The demo needs no weights, GPU, OCR installation or camera.
+Image upload and webcam recognition require the trained weights and OCR dependencies. A camera is optional when uploading an image.
 
-The project supports two model layouts. A **single-class plate-box detector** finds each whole plate and then uses Tesseract OCR. The supplied Roboflow dataset is a **37-class character-box detector** (digits, letters and plate markings); GateLog reads those class labels in image order, so it does not need Tesseract. Do not use generic COCO vehicle weights for either layout. Set YOLO_MODEL_PATH to the trained `.pt` file; relative paths resolve from the repository root. Weights are deliberately not downloaded or committed.
+The project supports whole-plate, character, and mixed detectors. The supplied 37-class model includes whole-plate classes `Indian_registered` and `Non_registered`: those boxes must go through Tesseract OCR. Character-only results are decoded in image order. Set YOLO_MODEL_PATH to the trained `.pt` file; relative paths resolve from the repository root. Weights are deliberately not downloaded or committed.
 
 Install backend/requirements-ai.txt in a Python environment supported by PyTorch/Ultralytics (Python 3.11 or 3.12 is a practical choice if their wheels are unavailable on a newer Python). For single-class plate-box weights, install the Tesseract executable and put it on PATH. The supplied TesseractOCR adapter can be replaced with any OCRService implementation.
 

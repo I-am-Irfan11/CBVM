@@ -417,3 +417,6 @@
     transition: none !important;
   }
 }
+.transport-route { padding: 18px 0; border-bottom: 1px solid var(--border, #d9e2e7); }
+.transport-route summary { cursor: pointer; font-weight: 600; padding: 8px 0; }
+.transport-route p { font-size: 13px; }

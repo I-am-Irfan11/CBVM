@@ -8,6 +8,7 @@ MAX_IMAGE_BYTES = 8 * 1024 * 1024
 
 def readiness(settings):
     import importlib.util
+    import shutil
     from pathlib import Path
     from app.core.config import ROOT
     path = Path(settings.yolo_model_path)
@@ -17,11 +18,15 @@ def readiness(settings):
         missing.append("Trained license-plate YOLO weights are missing. Set YOLO_MODEL_PATH to a local .pt file.")
     if importlib.util.find_spec("ultralytics") is None:
         missing.append("Python package ultralytics is not installed. Install backend/requirements-ai.txt in the backend environment.")
+    if importlib.util.find_spec("pytesseract") is None:
+        missing.append("Install pytesseract from backend/requirements-ai.txt for plate text recognition.")
+    if not shutil.which("tesseract") and not Path("C:/Program Files/Tesseract-OCR/tesseract.exe").is_file():
+        missing.append("Install Tesseract OCR and add it to PATH for whole-plate recognition.")
     message = (
         "Dependencies detected; recognition quality requires camera validation."
         if not missing else " ".join(missing)
     )
-    message += " Tesseract is only needed for whole-plate OCR models; the current character model reads its detected labels directly."
+    message += " Whole-plate detections use OCR; character-only detections are decoded from their labels."
     return {"ready": not missing, "dependencies": missing, "message": message}
 
 

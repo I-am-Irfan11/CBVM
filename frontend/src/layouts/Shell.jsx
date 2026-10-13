@@ -20,6 +20,7 @@ export const pages = [
   ["reviews", "Review queue", ScanLine],
   ["visitors", "Visitors", CarFront],
   ["buses", "Bus operations", CarFront],
+  ["transport", "Bus routes & timings", CarFront],
   ["reports", "Reports", History],
   ["cameras", "Cameras", Radio],
   ["purposes", "Trip purposes", History],

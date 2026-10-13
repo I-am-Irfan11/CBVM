@@ -75,6 +75,7 @@ export default function App() {
               : {
                   visitors: "/visitors",
                   buses: "/buses",
+                  transport: "/transport/routes",
                   reports: "/analytics?days=30",
                   cameras: "/cameras",
                   purposes: "/purposes?include_inactive=true",
@@ -238,6 +239,7 @@ export default function App() {
     },
   ];
   const headings = {
+    transport: ["Bus routes & timings", "College routes, boarding points and morning departure times."],
     scan: [
       "Scan plate",
       "Capture a plate, inspect the reading, and record its movement.",

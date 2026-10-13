@@ -25,6 +25,11 @@ from app.services.operations import utcnow
 router = APIRouter(tags=["Campus operations"])
 
 
+@router.get("/transport/routes")
+def transport_routes(request: Request, user=Depends(current_user)):
+    return [public(row) for row in request.app.state.db.transport_routes.find().sort("route_number", 1)]
+
+
 def audit(ops, action, old=None, new=None):
     ops.audit(action, old, new)
 

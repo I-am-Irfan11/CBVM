@@ -14,7 +14,7 @@ from urllib.request import Request, urlopen
 from app.core.config import ROOT
 
 SOURCE_URL = "https://hindustanuniv.ac.in/facilities/transport/"
-SNAPSHOT = ROOT / "database/seed/hits_transport.json"
+SNAPSHOT = Path(__file__).with_name("hits_transport.json")
 
 
 class TimetableParser(HTMLParser):

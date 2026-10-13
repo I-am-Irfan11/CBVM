@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from pathlib import Path
+import re
 from time import perf_counter
 from typing import Literal
 
@@ -57,6 +58,12 @@ class MockANPRService(ANPRService):
 class TesseractOCR(OCRService):
     def read(self, image):
         import pytesseract
+        import shutil
+
+        if not shutil.which("tesseract"):
+            windows_install = Path("C:/Program Files/Tesseract-OCR/tesseract.exe")
+            if windows_install.is_file():
+                pytesseract.pytesseract.tesseract_cmd = str(windows_install)
 
         result = pytesseract.image_to_data(image, config="--psm 7", output_type=pytesseract.Output.DICT)
         words = [
@@ -87,7 +94,7 @@ class RealANPRService(ANPRService):
             from ultralytics import YOLO
 
             self.model = YOLO(str(self.path))
-        names = self.model.names
+        names = getattr(self.model, "names", {})
         names = names.values() if isinstance(names, dict) else names
         self.character_labels = {str(name).strip().upper() for name in names}
         self.character_mode = len(self.character_labels.intersection(set("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"))) >= 20
@@ -97,10 +104,17 @@ class RealANPRService(ANPRService):
         rows = []
         height, width = frame.shape[:2]
         for result in self.model.predict(frame, verbose=False):
+            plate_boxes = []
             if self.character_mode:
-                rows.extend(self._read_character_boxes(result, width, height, started))
-                continue
-            for box in result.boxes:
+                plate_boxes = [box for box in result.boxes
+                               if str(self.model.names[int(box.cls[0])]).lower()
+                               in {"indian_registered", "non_registered", "license_plate", "licence_plate", "plate"}]
+                if not plate_boxes:
+                    rows.extend(self._read_character_boxes(result, width, height, started))
+                    continue
+            else:
+                plate_boxes = result.boxes
+            for box in plate_boxes:
                 x1, y1, x2, y2 = (int(v) for v in box.xyxy[0].tolist())
                 x1, x2 = max(0, x1), min(width, x2)
                 y1, y2 = max(0, y1), min(height, y2)
@@ -111,7 +125,8 @@ class RealANPRService(ANPRService):
                 crop = cv2.bilateralFilter(crop, 9, 75, 75)
                 crop = cv2.threshold(crop, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
                 raw, ocr_confidence = self.ocr.read(crop)
-                plate = normalize_plate(raw)
+                # Keep the original OCR text for review; punctuation is not part of a plate.
+                plate = re.sub(r"[^A-Z0-9]", "", raw.upper())
                 confidence = min(float(box.conf[0]), max(0.0, min(1.0, ocr_confidence)))
                 rows.append(
                     Detection(

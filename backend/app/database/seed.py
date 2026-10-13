@@ -4,6 +4,7 @@ from uuid import NAMESPACE_URL, uuid5
 
 from app.core.config import ROOT, Settings
 from app.database.connection import connect
+from app.database.transport import SNAPSHOT, seed_transport
 from app.models.documents import Bus, Camera
 
 
@@ -55,6 +56,8 @@ def seed(db, settings):
                 {"vehicle_id": vehicle["_id"]},
                 {"$setOnInsert": {"_id": f"bus-{number}", **bus.model_dump()}}, upsert=True,
             )
+    if SNAPSHOT.exists():
+        seed_transport(db)
     for direction in ("IN", "OUT"):
         camera = Camera(camera_name=f"Main gate · {direction}", location="Main gate", direction=direction,
                         health_status="mock" if settings.use_mock_ai else "idle")

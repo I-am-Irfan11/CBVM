@@ -53,6 +53,7 @@ export default function OperationsPages({
     page === "buses" ? "/vehicles?vehicle_type=bus&limit=500" : null,
     0,
   );
+  const routes = useApi(page === "buses" ? "/transport/routes" : null, 0);
   const analytics = useApi(
     page === "reports"
       ? `/analytics?days=${days}${vehicleType ? `&vehicle_type=${encodeURIComponent(vehicleType)}` : ""}${purpose ? `&purpose=${encodeURIComponent(purpose)}` : ""}${movementStatus ? `&status=${movementStatus}` : ""}${dateFrom ? `&date_from=${dateFrom}` : ""}${dateTo ? `&date_to=${dateTo}` : ""}`
@@ -401,7 +402,12 @@ export default function OperationsPages({
               </label>
               <label>
                 Route
-                <input name="route" placeholder="e.g. Route 12 · Tambaram" required />
+                <input name="route" list="college-routes" placeholder="Select or enter a route" required />
+                <datalist id="college-routes">
+                  {(routes.data || []).map((route) => (
+                    <option key={route.id} value={`${route.route_number} · ${route.route_name}`} />
+                  ))}
+                </datalist>
               </label>
               <label>
                 Driver name
@@ -798,6 +804,25 @@ export default function OperationsPages({
               },
             ]}
           />
+        </Card>
+      </DataState>
+    );
+  if (page === "transport")
+    return (
+      <DataState state={state} retry={refresh}>
+        <Card>
+          {(state.data || []).length === 0 ? <p>No college routes have been imported yet.</p> : null}
+          {(state.data || []).map((route) => (
+            <details key={route.id} className="transport-route">
+              <summary>{route.route_number} · {route.route_name} — {route.bus_name}</summary>
+              <Table rows={route.boarding_points || []} columns={[
+                { key: "sequence", label: "Stop" },
+                { key: "name", label: "Boarding point" },
+                { key: "time", label: "Morning time" },
+              ]} />
+              <p><a href={route.source_url} target="_blank" rel="noreferrer">College transport source</a> · {route.source_timetable_label}</p>
+            </details>
+          ))}
         </Card>
       </DataState>
     );
