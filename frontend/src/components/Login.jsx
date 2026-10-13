@@ -141,7 +141,7 @@ export default function Login({ onAuthenticated }) {
           </div>
         ) : (
           <>
-            <form className="login-form firebase-form" onSubmit={emailAction}>
+            <form className="login-form firebase-form" onSubmit={emailAction} autoComplete="off">
               {createAccount ? (
                 <label>
                   Full name
@@ -159,7 +159,7 @@ export default function Login({ onAuthenticated }) {
                   type="email"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
-                  autoComplete="email"
+                  autoComplete="off"
                   required
                 />
               </label>
@@ -170,7 +170,7 @@ export default function Login({ onAuthenticated }) {
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   autoComplete={
-                    createAccount ? "new-password" : "current-password"
+                    createAccount ? "new-password" : "off"
                   }
                   minLength={6}
                   required
