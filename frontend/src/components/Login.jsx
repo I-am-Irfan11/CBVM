@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import {
   GoogleAuthProvider,
   createUserWithEmailAndPassword,
+  getRedirectResult,
   onAuthStateChanged,
   sendEmailVerification,
   signInWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
   updateProfile,
 } from "firebase/auth";
 import { CarFront } from "lucide-react";
@@ -23,7 +25,15 @@ export default function Login({ onAuthenticated }) {
   const [error, setError] = useState("");
   useEffect(() => {
     if (!firebaseAuth) return;
-    return onAuthStateChanged(firebaseAuth, setCurrentUser);
+    const unsubscribe = onAuthStateChanged(firebaseAuth, setCurrentUser);
+    getRedirectResult(firebaseAuth)
+      .then((credential) => {
+        if (credential) return finishSignIn(credential.user);
+      })
+      .catch((cause) => {
+        setError(cause?.message || "Google sign-in could not be completed.");
+      });
+    return unsubscribe;
   }, []);
 
   async function finishSignIn(firebaseUser) {
@@ -81,11 +91,14 @@ export default function Login({ onAuthenticated }) {
 
   function googleSignIn() {
     run(async () => {
-      const credential = await signInWithPopup(
-        firebaseAuth,
-        new GoogleAuthProvider(),
-      );
-      await finishSignIn(credential.user);
+      const provider = new GoogleAuthProvider();
+      try {
+        const credential = await signInWithPopup(firebaseAuth, provider);
+        await finishSignIn(credential.user);
+      } catch (cause) {
+        if (cause?.code !== "auth/popup-blocked") throw cause;
+        await signInWithRedirect(firebaseAuth, provider);
+      }
     });
   }
 
