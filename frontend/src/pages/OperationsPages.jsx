@@ -236,6 +236,9 @@ export default function OperationsPages({
         {visitorOpen ? (
           <Card>
             <h2>Record a vehicle arrival</h2>
+            <p className="muted">
+              Students and staff already in the registry should use Scan plate. No organization is needed here.
+            </p>
             <form
               className="ops-form"
               onSubmit={(e) => {
@@ -274,7 +277,7 @@ export default function OperationsPages({
                 />
               </label>
               <label>
-                Person or student name
+                Visitor name
                 <input name="name" required />
               </label>
               <label>
