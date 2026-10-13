@@ -31,11 +31,16 @@ import DemoControls from "./components/DemoControls";
 import Login from "./components/Login";
 import OperationsPages from "./pages/OperationsPages";
 import ReviewForm from "./components/ReviewForm";
+import Startup from "./components/Startup";
+import { signOut } from "firebase/auth";
+import { firebaseAuth } from "./services/firebase";
 
 const initialPage = () =>
-  pages.some((item) => item[0] === location.hash.slice(1))
-    ? location.hash.slice(1)
+  pages.some((item) => item[0] === location.hash.slice(1).split("?")[0])
+    ? location.hash.slice(1).split("?")[0]
     : "dashboard";
+const historyVehicle = () =>
+  new URLSearchParams(location.hash.split("?")[1] || "").get("vehicle") || "";
 export default function App() {
   const [page, setPage] = useState(initialPage);
   const [revision, setRevision] = useState(0);
@@ -46,7 +51,7 @@ export default function App() {
   const [search, setSearch] = useState("");
   const [type, setType] = useState("");
   const [offset, setOffset] = useState(0);
-  const [vehicleId, setVehicleId] = useState("");
+  const [vehicleId, setVehicleId] = useState(historyVehicle);
   const [plateSearch, setPlateSearch] = useState("");
   const [pending, setPending] = useState(false);
   const [user, setUser] = useState(undefined);
@@ -55,7 +60,7 @@ export default function App() {
   const [visitorReviewPlate, setVisitorReviewPlate] = useState("");
   const refresh = useCallback(() => setRevision((value) => value + 1), []);
   const liveStatus = useLiveEvents(refresh, Boolean(user));
-  const dashboard = useApi("/dashboard", revision);
+  const dashboard = useApi(user ? "/dashboard" : null, revision);
   const path =
     page === "registry"
       ? `/vehicles?limit=25&offset=${offset}&search=${encodeURIComponent(search)}${type ? `&vehicle_type=${type}` : ""}`
@@ -72,12 +77,11 @@ export default function App() {
                   buses: "/buses",
                   reports: "/analytics?days=30",
                   cameras: "/cameras",
-                  transport: "/transport/routes",
                   purposes: "/purposes?include_inactive=true",
                   users: "/users",
                   audit: "/audit",
                 }[page] || null;
-  const view = useApi(path, revision);
+  const view = useApi(user ? path : null, revision);
   const notify = useCallback(
     (text, error = false) => setNotification({ text, error }),
     [],
@@ -101,11 +105,19 @@ export default function App() {
   useEffect(() => {
     const change = () => {
       setPage(initialPage());
+      setVehicleId(historyVehicle());
       setOffset(0);
     };
     window.addEventListener("hashchange", change);
     return () => window.removeEventListener("hashchange", change);
   }, []);
+  useEffect(() => {
+    const title = pages.find(([id]) => id === page)?.[1] || "Dashboard";
+    document.title = `${title} · GateLog`;
+    if (!user) return;
+    document.getElementById("main-content")?.focus({ preventScroll: true });
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, [page, user]);
   useEffect(() => {
     if (!notification || notification.error) return;
     const timer = setTimeout(() => setNotification(null), 6500);
@@ -113,9 +125,9 @@ export default function App() {
   }, [notification]);
   function navigate(next, id) {
     setPage(next);
-    location.hash = next;
+    location.hash = next + (id ? `?vehicle=${encodeURIComponent(id)}` : "");
     setOffset(0);
-    if (id) setVehicleId(id);
+    setVehicleId(id || "");
   }
   function authenticated(nextUser) {
     setUser(nextUser);
@@ -141,6 +153,7 @@ export default function App() {
     } catch {
       /* Access session may already have expired */
     }
+    if (firebaseAuth) await signOut(firebaseAuth).catch(() => {});
     setCsrfToken("");
     setUser(null);
   }
@@ -171,7 +184,7 @@ export default function App() {
       const vehicle = await api(
         `/vehicles/by-plate/${encodeURIComponent(plateSearch)}`,
       );
-      setVehicleId(vehicle.id);
+      navigate("history", vehicle.id);
       setOffset(0);
     } catch (error) {
       setVehicleId("");
@@ -225,6 +238,10 @@ export default function App() {
     },
   ];
   const headings = {
+    scan: [
+      "Scan plate",
+      "Capture a plate, inspect the reading, and record its movement.",
+    ],
     registry: [
       "Vehicle registry",
       "Manage the vehicles that belong on campus.",
@@ -248,7 +265,7 @@ export default function App() {
     ],
     buses: [
       "Bus operations",
-      "Connect registered campus buses to route references and trips.",
+      "Assign registered buses to routes and track each trip.",
     ],
     reports: [
       "Movement reports",
@@ -258,10 +275,6 @@ export default function App() {
       "Camera health",
       "See the last frame received from each gate source.",
     ],
-    transport: [
-      "HITS transport references",
-      "Historical route identifiers from the official transport page.",
-    ],
     purposes: [
       "Trip purposes",
       "Manage the reasons captured with campus movements.",
@@ -269,12 +282,7 @@ export default function App() {
     users: ["User access", "Manage GateLog accounts and roles."],
     audit: ["Audit log", "Review administrative and manual changes."],
   };
-  if (user === undefined)
-    return (
-      <main className="login-page">
-        <p>Checking session…</p>
-      </main>
-    );
+  if (user === undefined) return <Startup />;
   if (!user) return <Login onAuthenticated={authenticated} />;
   return (
     <>
@@ -318,6 +326,15 @@ export default function App() {
                 </button>
               )}
             </div>
+            {page === "scan" ? (
+              <DataState state={dashboard} retry={refresh}>
+                <DemoControls
+                  notify={notify}
+                  refresh={refresh}
+                  mockAi={dashboard.data?.mock_ai ?? false}
+                />
+              </DataState>
+            ) : null}
             {page === "registry" ? (
               <Card>
                 <div className="toolbar">
@@ -631,9 +648,14 @@ export default function App() {
               </>
             ) : null}
             {headings[page] &&
-            !["registry", "inside", "history", "activity", "reviews"].includes(
-              page,
-            ) ? (
+            ![
+              "registry",
+              "inside",
+              "history",
+              "activity",
+              "reviews",
+              "scan",
+            ].includes(page) ? (
               <OperationsPages
                 page={page}
                 state={view}

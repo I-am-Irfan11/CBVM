@@ -8,7 +8,6 @@ MAX_IMAGE_BYTES = 8 * 1024 * 1024
 
 def readiness(settings):
     import importlib.util
-    import shutil
     from pathlib import Path
     from app.core.config import ROOT
     path = Path(settings.yolo_model_path)
@@ -16,13 +15,14 @@ def readiness(settings):
     missing = []
     if not path.is_file():
         missing.append("Trained license-plate YOLO weights are missing. Set YOLO_MODEL_PATH to a local .pt file.")
-    for name in ("ultralytics", "pytesseract"):
-        if importlib.util.find_spec(name) is None:
-            missing.append(f"Python package {name} is not installed. Install backend/requirements-ai.txt in the backend environment.")
-    if shutil.which("tesseract") is None:
-        missing.append("Tesseract OCR executable is missing from the backend PATH.")
-    return {"ready": not missing, "dependencies": missing,
-            "message": "Dependencies detected; recognition quality requires camera validation." if not missing else " ".join(missing)}
+    if importlib.util.find_spec("ultralytics") is None:
+        missing.append("Python package ultralytics is not installed. Install backend/requirements-ai.txt in the backend environment.")
+    message = (
+        "Dependencies detected; recognition quality requires camera validation."
+        if not missing else " ".join(missing)
+    )
+    message += " Tesseract is only needed for whole-plate OCR models; the current character model reads its detected labels directly."
+    return {"ready": not missing, "dependencies": missing, "message": message}
 
 
 @router.get("/status")

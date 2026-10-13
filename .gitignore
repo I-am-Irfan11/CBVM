@@ -4,11 +4,15 @@ __pycache__/
 .ruff_cache/
 *.pyc
 .env
+frontend/.env.local
+frontend/.env.*.local
 node_modules/
 frontend/dist/
 *.log
 *.pt
 *.onnx
 data/
+/Indian\ Licence\ Plate\ Detection.v4i.yolov8/
+/Number\ plate\ zip/
 test-results/
 playwright-report/

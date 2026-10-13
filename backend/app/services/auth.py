@@ -1,9 +1,6 @@
 import hashlib
-import json
 import logging
 import secrets
-import urllib.error
-import urllib.request
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
@@ -19,6 +16,7 @@ _dummy_hash = _hasher.hash(secrets.token_urlsafe(32))
 
 
 def password_hash(password):
+    """Legacy password helper retained only for isolated automated tests."""
     return _hasher.hash(password)
 
 SAFE_USER_FIELDS = (
@@ -81,54 +79,27 @@ class AuthService:
         return {"access_token": token, "csrf_token": csrf, "max_age": max_age, "user": user_public(user)}
 
     def signup(self, username, email, full_name, password, department, client_id):
-        """Self-registration for local GateLog accounts.
-
-        New accounts always receive the security role; administrators are
-        created with scripts/create_admin.py or promoted by an existing
-        administrator. Never accepts a caller-supplied role.
-        """
         now = datetime.now(timezone.utc)
         key = hashlib.sha256(f"signup:{client_id}".encode()).hexdigest()
         attempt = self.db.login_attempts.find_one({"_id": key})
         if attempt and attempt["expires_at"] > now and attempt["count"] >= 10:
             raise HTTPException(429, "Too many sign-up attempts. Try again in an hour.")
-
-        def rejected(detail, status=409):
-            self.db.login_attempts.update_one(
-                {"_id": key},
-                {"$inc": {"count": 1}, "$set": {"expires_at": now + timedelta(hours=1)}},
-                upsert=True,
-            )
-            raise HTTPException(status, detail)
-
-        username = (username or "").strip().lower()
-        email = (email or "").strip().lower()
-        full_name = (full_name or "").strip()
-        if not full_name:
-            rejected("Enter your full name", 422)
-        if len(password or "") < 12:
-            rejected("Choose a GateLog password of at least 12 characters", 422)
+        username, email, full_name = username.strip().lower(), email.strip().lower(), full_name.strip()
+        if not full_name or len(password) < 12:
+            raise HTTPException(422, "Enter your name and a test password of at least 12 characters")
         if self.db.users.find_one({"$or": [{"username": username}, {"email": email}]}):
-            rejected("Username or email already exists")
+            raise HTTPException(409, "Username or email already exists")
         user = {
-            "_id": str(uuid4()),
-            "username": username,
-            "email": email,
-            "full_name": full_name[:100],
-            "role": "security",
-            "department": (department or "").strip() or None,
-            "active": True,
-            "auth_provider": "local",
-            "password_hash": password_hash(password),
-            "created_at": now,
-            "updated_at": now,
-            "last_login_at": now,
+            "_id": str(uuid4()), "username": username, "email": email,
+            "full_name": full_name[:100], "role": "security",
+            "department": (department or "").strip() or None, "active": True,
+            "auth_provider": "local", "password_hash": password_hash(password),
+            "created_at": now, "updated_at": now, "last_login_at": now,
         }
         try:
             self.db.users.insert_one(user)
         except DuplicateKeyError:
-            rejected("Username or email already exists")
-        self.db.login_attempts.delete_one({"_id": key})
+            raise HTTPException(409, "Username or email already exists") from None
         token, csrf, max_age = self.create_session(user)
         return {"access_token": token, "csrf_token": csrf, "max_age": max_age, "user": user_public(user)}
 
@@ -136,82 +107,101 @@ class AuthService:
     def _emails(value):
         return {item.strip().lower() for item in value.split(",") if item.strip()}
 
-    def google_login(self, access_token):
-        if not self.settings.supabase_url or not self.settings.supabase_anon_key:
-            raise HTTPException(503, "Google sign-in is not configured for this GateLog deployment.")
+    def firebase_login(self, id_token):
+        """Verify a Firebase ID token and map it to a role-controlled GateLog user."""
+        project_id = self.settings.firebase_project_id.strip()
+        if not project_id:
+            raise HTTPException(503, "Firebase sign-in is not configured on the GateLog server.")
 
-        url = f"{self.settings.supabase_url.rstrip('/')}/auth/v1/user"
-        request = urllib.request.Request(
-            url,
-            headers={
-                "Authorization": f"Bearer {access_token}",
-                "apikey": self.settings.supabase_anon_key,
-                "Accept": "application/json",
-            },
-        )
         try:
-            with urllib.request.urlopen(request, timeout=10) as response:
-                identity = json.loads(response.read())
-        except urllib.error.HTTPError as error:
-            if error.code in (400, 401, 403):
-                raise HTTPException(401, "Google sign-in expired. Please try again.") from None
-            raise HTTPException(503, "Could not verify Google sign-in. Please retry.") from None
-        except Exception as error:
-            # Keep credentials out of logs; the exception message helps diagnose
-            # malformed URLs, DNS failures, TLS problems, and timeouts.
-            logger.warning(
-                "Supabase user verification connection failed (%s)",
-                type(error).__name__,
+            signing_key = jwt.PyJWKClient(
+                "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com",
+                cache_keys=True,
+                timeout=8,
+            ).get_signing_key_from_jwt(id_token)
+            claims = jwt.decode(
+                id_token,
+                signing_key.key,
+                algorithms=["RS256"],
+                audience=project_id,
+                issuer=f"https://securetoken.google.com/{project_id}",
+                options={"require": ["sub", "iat", "exp", "auth_time", "firebase"]},
             )
-            raise HTTPException(503, "Could not reach the sign-in service. Please retry.") from None
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(401, "Your Firebase sign-in expired. Please sign in again.") from None
+        except (jwt.InvalidTokenError, jwt.PyJWKClientError, ValueError) as error:
+            logger.info("Firebase token verification rejected (%s)", type(error).__name__)
+            raise HTTPException(401, "Could not verify your Firebase sign-in. Please retry.") from None
+        except Exception as error:
+            logger.warning("Firebase verification service unavailable (%s)", type(error).__name__)
+            raise HTTPException(503, "Could not reach Firebase to verify sign-in. Please retry.") from None
 
-        email = (identity.get("email") or "").strip().lower()
-        subject = identity.get("id") or ""
-        confirmed = identity.get("email_confirmed_at") or identity.get("confirmed_at")
-        if not email or not subject or not confirmed:
-            raise HTTPException(401, "Use a Google account with a verified email address.")
+        uid = str(claims.get("user_id") or claims["sub"])
+        email = (claims.get("email") or "").strip().lower()
+        if not uid or not email or claims.get("email_verified") is not True:
+            raise HTTPException(401, "Verify your email address before using GateLog.")
 
-        admin_emails = self._emails(self.settings.supabase_admin_emails)
-        allowed_emails = self._emails(self.settings.supabase_allowed_emails) | admin_emails
-        allowed_domains = self._emails(self.settings.supabase_allowed_domains)
-        domain = email.rsplit("@", 1)[-1]
-        if email not in allowed_emails and domain not in allowed_domains:
-            if not allowed_emails and not allowed_domains:
-                raise HTTPException(503, "The administrator must configure allowed Google accounts first.")
-            raise HTTPException(403, "This Google account is not on the GateLog access list.")
+        admin_emails = self._emails(self.settings.firebase_admin_emails)
+        allowed_emails = self._emails(self.settings.firebase_allowed_emails) | admin_emails
+        allowed_domains = self._emails(self.settings.firebase_allowed_domains)
+        allowed_uids = {item.strip() for item in self.settings.firebase_allowed_uids.split(",") if item.strip()}
+        user = self.db.users.find_one({"auth_provider": "firebase", "provider_subject": uid})
+        if user is None and email:
+            # An administrator can pre-create a role grant before the person
+            # finishes Firebase registration; first sign-in links by verified email.
+            user = self.db.users.find_one({"email": email})
+        configured_allowlist = bool(allowed_emails or allowed_domains or allowed_uids)
+        email_domain = email.rsplit("@", 1)[-1] if "@" in email else ""
+        allow_all = (
+            "*" in allowed_emails
+            or "*" in allowed_domains
+            or "*" in allowed_uids
+        )
+        allowed = (
+            allow_all
+            or email in allowed_emails
+            or email_domain in allowed_domains
+            or uid in allowed_uids
+        )
+        if not allowed and not user and not configured_allowlist:
+            raise HTTPException(503, "GateLog access is not configured. Add an operator in User access or set a Firebase allowlist.")
+        if not allowed and not user:
+            raise HTTPException(403, "This account is not on the GateLog access list.")
+        if user and not user.get("active", True):
+            raise HTTPException(403, "This account is inactive. Contact a GateLog administrator.")
 
         now = datetime.now(timezone.utc)
-        user = self.db.users.find_one({"auth_provider": "supabase", "provider_subject": subject})
+        display_email = email
+        profile_name = claims.get("name") or email.split("@", 1)[0] or "GateLog user"
         if user is None:
-            user = self.db.users.find_one({"email": email})
-            if user is not None:
-                self.db.users.update_one(
-                    {"_id": user["_id"]},
-                    {"$set": {"auth_provider": "supabase", "provider_subject": subject}},
-                )
-                user = self.db.users.find_one({"_id": user["_id"]})
-            else:
-                metadata = identity.get("user_metadata") or {}
-                name = metadata.get("full_name") or metadata.get("name") or email.split("@", 1)[0]
-                user = {
-                    "_id": str(uuid4()),
-                    "username": f"google-{hashlib.sha256(subject.encode()).hexdigest()[:16]}",
-                    "email": email,
-                    "full_name": str(name)[:100],
-                    "role": "admin" if email in admin_emails else "security",
-                    "department": None,
-                    "active": True,
-                    "auth_provider": "supabase",
-                    "provider_subject": subject,
-                    "created_at": now,
-                    "updated_at": now,
-                }
-                try:
-                    self.db.users.insert_one(user)
-                except DuplicateKeyError:
-                    user = self.db.users.find_one({"email": email})
-                    if user is None:
-                        raise HTTPException(409, "Could not create the GateLog account. Please retry.") from None
+            user = {
+                "_id": str(uuid4()),
+                "username": f"firebase-{hashlib.sha256(uid.encode()).hexdigest()[:16]}",
+                "email": display_email,
+                "full_name": str(profile_name)[:100],
+                "role": "admin" if email in admin_emails else "security",
+                "department": None,
+                "active": True,
+                "auth_provider": "firebase",
+                "provider_subject": uid,
+                "created_at": now,
+                "updated_at": now,
+            }
+            try:
+                self.db.users.insert_one(user)
+            except DuplicateKeyError:
+                user = self.db.users.find_one({"auth_provider": "firebase", "provider_subject": uid})
+                if user is None:
+                    raise HTTPException(409, "Could not create the GateLog account. Please retry.") from None
+        else:
+            self.db.users.update_one(
+                {"_id": user["_id"]},
+                {
+                    "$set": {"auth_provider": "firebase", "provider_subject": uid, "updated_at": now},
+                    "$unset": {"password_hash": ""},
+                },
+            )
+            user = self.db.users.find_one({"_id": user["_id"]})
 
         if not user.get("active", True):
             raise HTTPException(403, "This account is inactive. Contact a GateLog administrator.")

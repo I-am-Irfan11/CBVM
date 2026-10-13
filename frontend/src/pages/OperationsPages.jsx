@@ -53,7 +53,6 @@ export default function OperationsPages({
     page === "buses" ? "/vehicles?vehicle_type=bus&limit=500" : null,
     0,
   );
-  const routes = useApi(page === "buses" ? "/transport/routes" : null, 0);
   const analytics = useApi(
     page === "reports"
       ? `/analytics?days=${days}${vehicleType ? `&vehicle_type=${encodeURIComponent(vehicleType)}` : ""}${purpose ? `&purpose=${encodeURIComponent(purpose)}` : ""}${movementStatus ? `&status=${movementStatus}` : ""}${dateFrom ? `&date_from=${dateFrom}` : ""}${dateTo ? `&date_to=${dateTo}` : ""}`
@@ -401,14 +400,8 @@ export default function OperationsPages({
                 <input name="number" required />
               </label>
               <label>
-                HITS route reference
-                <select name="route" required>
-                  {(routes.data || []).map((r) => (
-                    <option key={r.id} value={r.route_number}>
-                      {r.route_number} · {r.route_name} — {r.bus_name}
-                    </option>
-                  ))}
-                </select>
+                Route
+                <input name="route" placeholder="e.g. Route 12 · Tambaram" required />
               </label>
               <label>
                 Driver name
@@ -600,40 +593,6 @@ export default function OperationsPages({
       </>
     );
 
-  if (page === "transport")
-    return (
-      <>
-        <div className="info-note">
-          Official HITS reference data · timetable labelled 2023–2024 ·
-          reference only. Verify routes and timings with HITS before operational
-          use.
-        </div>
-        <DataState state={state} retry={refresh}>
-          <Card>
-            <Table
-              rows={state.data || []}
-              empty="No HITS route snapshot is installed."
-              columns={[
-                { key: "route_number", label: "Route" },
-                { key: "route_name", label: "Route name" },
-                { key: "bus_name", label: "Official bus name" },
-                { key: "source_timetable_label", label: "Published timetable" },
-                {
-                  key: "source_url",
-                  label: "Source",
-                  render: (row) => (
-                    <a href={row.source_url} target="_blank" rel="noreferrer">
-                      Official page
-                    </a>
-                  ),
-                },
-              ]}
-            />
-          </Card>
-        </DataState>
-      </>
-    );
-
   if (page === "purposes")
     return (
       <>
@@ -716,7 +675,7 @@ export default function OperationsPages({
         </div>
         {userOpen ? (
           <Card>
-            <h2>Create account</h2>
+            <h2>Grant account access</h2>
             <form
               className="ops-form"
               onSubmit={(e) => {
@@ -734,7 +693,7 @@ export default function OperationsPages({
                         department: f.get("department") || null,
                       },
                     }),
-                  "Account created. The user signs in with their GateLog account.",
+                  "Access added. The user can sign in through Firebase with this email.",
                 ).then((ok) => ok && setUserOpen(false));
               }}
             >
@@ -763,7 +722,7 @@ export default function OperationsPages({
                 <input name="department" />
               </label>
               <button className="button" disabled={pending}>
-                Create account
+                Add access
               </button>
             </form>
           </Card>

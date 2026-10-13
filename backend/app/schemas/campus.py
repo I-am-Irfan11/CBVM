@@ -49,7 +49,7 @@ class VisitorInput(StrictModel):
 class BusInput(StrictModel):
     vehicle_id: str
     bus_number: str = Field(min_length=1, max_length=30)
-    route_number: str = Field(min_length=1, max_length=20)
+    route_number: str = Field(min_length=1, max_length=120)
     driver_name: str = Field(min_length=1, max_length=100)
     driver_phone: str | None = Field(default=None, max_length=30)
     capacity: int = Field(default=48, ge=1, le=100)
@@ -84,6 +84,7 @@ class ReviewAction(StrictModel):
 
 
 class UserInput(StrictModel):
+    # Test-only legacy field. Production account passwords are handled by Firebase.
     password: str | None = Field(default=None, min_length=12, max_length=256)
     username: str = Field(min_length=3, max_length=80, pattern=r"^[a-zA-Z0-9_.-]+$")
     email: str = Field(min_length=3, max_length=254, pattern=r"^[^\s@]+@[^\s@]+\.[^\s@]+$")

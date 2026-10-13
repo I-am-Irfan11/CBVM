@@ -7,10 +7,12 @@ import {
   ScanLine,
   ShieldCheck,
   ArrowUpRight,
+  ChevronDown,
 } from "lucide-react";
 
 export const pages = [
   ["dashboard", "Dashboard", LayoutDashboard],
+  ["scan", "Scan plate", ScanLine],
   ["registry", "Vehicle registry", CarFront],
   ["inside", "Currently inside", LogIn],
   ["history", "Vehicle history", History],
@@ -20,7 +22,6 @@ export const pages = [
   ["buses", "Bus operations", CarFront],
   ["reports", "Reports", History],
   ["cameras", "Cameras", Radio],
-  ["transport", "Transport references", CarFront],
   ["purposes", "Trip purposes", History],
   ["users", "User access", ShieldCheck],
   ["audit", "Audit log", ShieldCheck],
@@ -40,6 +41,28 @@ export default function Shell({
       : user?.role === "security"
         ? pages.filter(([id]) => !["users", "audit", "purposes"].includes(id))
         : pages;
+  function link([id, label, Icon]) {
+    return (
+      <a
+        href={`#${id}`}
+        key={id}
+        onClick={() => navigate(id)}
+        className={page === id ? "active" : ""}
+        aria-current={page === id ? "page" : undefined}
+      >
+        <Icon size={18} />
+        <span>{label}</span>
+        {id === "reviews" && dashboard?.pending_reviews > 0 ? (
+          <b>{dashboard.pending_reviews}</b>
+        ) : null}
+      </a>
+    );
+  }
+  const groups = [
+    ["Transport", ["buses", "transport"]],
+    ["Administration", ["cameras", "purposes", "users", "audit"]],
+  ];
+  const secondary = groups.flatMap(([, ids]) => ids);
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -57,28 +80,27 @@ export default function Shell({
             GateLog<small>CAMPUS OPERATIONS</small>
           </span>
         </a>
-        <div className="sidebar-label">WORKSPACE</div>
+        <div className="sidebar-label">GATE CONSOLE</div>
         <nav aria-label="Main navigation">
-          {visiblePages.map(([id, label, Icon]) => (
-            <a
-              href={`#${id}`}
-              key={id}
-              onClick={() => navigate(id)}
-              className={page === id ? "active" : ""}
-              aria-current={page === id ? "page" : undefined}
-            >
-              <Icon size={19} />
-              <span>{label}</span>
-              {id === "reviews" && dashboard?.pending_reviews > 0 ? (
-                <b>{dashboard.pending_reviews}</b>
-              ) : null}
-            </a>
-          ))}
+          {visiblePages.filter(([id]) => !secondary.includes(id)).map(link)}
+          {groups.map(([name, ids]) =>
+            visiblePages.some(([id]) => ids.includes(id)) ? (
+              <details
+                key={`${name}-${ids.includes(page)}`}
+                className="nav-group"
+                open={ids.includes(page) || undefined}
+              >
+                <summary>
+                  {name}
+                  <ChevronDown size={15} />
+                </summary>
+                {visiblePages.filter(([id]) => ids.includes(id)).map(link)}
+              </details>
+            ) : null,
+          )}
         </nav>
         <div className="sidebar-bottom">
-          <ShieldCheck size={24} />
           <strong>Campus security desk</strong>
-          <p>Vehicle movement & trip-purpose records</p>
           <div className="desk-code">
             MAIN GATE <ArrowUpRight size={15} />
           </div>
@@ -111,14 +133,16 @@ export default function Shell({
             </button>
           </div>
         </header>
-        <main id="main-content">
+        <main id="main-content" tabIndex={-1}>
           {dashboard?.database_mode === "memory" ? (
             <div className="demo-notice">
               DEMO WORKSPACE{" "}
               <span>In-memory data resets when the backend restarts.</span>
             </div>
           ) : null}
-          {children}
+          <div className="console-page" key={page}>
+            {children}
+          </div>
         </main>
         <footer>
           GateLog / Campus vehicle operations{" "}

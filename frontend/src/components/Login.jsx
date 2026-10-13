@@ -1,64 +1,203 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import {
+  GoogleAuthProvider,
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  sendEmailVerification,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  updateProfile,
+} from "firebase/auth";
 import { CarFront } from "lucide-react";
-
-// Must match backend/app/routers/auth.py::DEMO_COOKIE.
-const DEMO_COOKIE = "gatelog_demo";
-
-// Mirrors backend/app/services/auth.py::demo_user. Rendered as admin so the demo
-// can reach every page; nothing here is a real account.
-function demoUser(fullName) {
-  return {
-    id: "demo-open-access",
-    username: "demo",
-    email: "demo@gatelog.local",
-    full_name: fullName.trim() || "Demo Operator",
-    role: "admin",
-    department: null,
-    auth_provider: "demo",
-  };
-}
+import { api, setCsrfToken } from "../services/api";
+import { firebaseAuth, firebaseConfigured } from "../services/firebase";
 
 export default function Login({ onAuthenticated }) {
-  const [fullName, setFullName] = useState("");
+  const [createAccount, setCreateAccount] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [currentUser, setCurrentUser] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  useEffect(() => {
+    if (!firebaseAuth) return;
+    return onAuthStateChanged(firebaseAuth, setCurrentUser);
+  }, []);
 
-  function enter(event) {
+  async function finishSignIn(firebaseUser) {
+    const result = await api("/auth/firebase", {
+      method: "POST",
+      body: { id_token: await firebaseUser.getIdToken() },
+    });
+    setCsrfToken(result.csrf_token);
+    onAuthenticated?.(result.user);
+  }
+
+  async function run(action) {
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      await action();
+    } catch (cause) {
+      setError(
+        cause?.code === "auth/unauthorized-domain"
+          ? "Add this website domain under Firebase Authentication → Settings → Authorized domains."
+          : cause?.message ||
+              "Sign-in could not be completed. Please try again.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function emailAction(event) {
     event.preventDefault();
-    // Tells /auth/me to report a signed-in demo identity so a reload stays
-    // inside the console instead of returning to this screen.
-    document.cookie = `${DEMO_COOKIE}=1; Path=/; SameSite=Lax`;
-    onAuthenticated?.(demoUser(fullName));
+    run(async () => {
+      if (createAccount) {
+        const credential = await createUserWithEmailAndPassword(
+          firebaseAuth,
+          email.trim(),
+          password,
+        );
+        if (name.trim())
+          await updateProfile(credential.user, { displayName: name.trim() });
+        await sendEmailVerification(credential.user);
+        setMessage(
+          "Account created. Verify your email, then return here and sign in.",
+        );
+        return;
+      }
+      const credential = await signInWithEmailAndPassword(
+        firebaseAuth,
+        email.trim(),
+        password,
+      );
+      await finishSignIn(credential.user);
+    });
+  }
+
+  function googleSignIn() {
+    run(async () => {
+      const credential = await signInWithPopup(
+        firebaseAuth,
+        new GoogleAuthProvider(),
+      );
+      await finishSignIn(credential.user);
+    });
   }
 
   return (
     <main className="login-screen">
-      <section className="login-card" aria-labelledby="login-title">
+      <section
+        className="login-card firebase-login"
+        aria-labelledby="login-title"
+      >
         <div className="login-mark" aria-hidden="true">
           <CarFront size={24} strokeWidth={1.8} />
         </div>
-        <h1 id="login-title">Sign in to GateLog</h1>
-        <p className="login-sub">
-          Demo entrance. No account or password is checked — continue straight
-          into the console.
-        </p>
-        <form className="login-form" onSubmit={enter}>
-          <label>
-            Display name
-            <input
-              value={fullName}
-              onChange={(event) => setFullName(event.target.value)}
-              placeholder="Demo Operator"
-              autoComplete="off"
-            />
-          </label>
-          <small className="field-hint">
-            Optional. Leave blank to appear as Demo Operator.
-          </small>
-          <button className="button login-submit">Enter GateLog</button>
-        </form>
-        <p className="login-switch">
-          Demo access only. Real accounts, passwords and roles are bypassed
-          while <code>DEMO_OPEN_ACCESS</code> is enabled.
-        </p>
+        <span className="eyebrow">CAMPUS GATE OPERATIONS</span>
+        <h1 id="login-title">Your gate, in view.</h1>
+        {!firebaseConfigured ? (
+          <div className="login-alert" role="status">
+            Firebase setup is not connected yet. Add the Firebase web app
+            settings to Vercel and redeploy.
+          </div>
+        ) : (
+          <>
+            <form className="login-form firebase-form" onSubmit={emailAction}>
+              {createAccount ? (
+                <label>
+                  Full name
+                  <input
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    autoComplete="name"
+                    required
+                  />
+                </label>
+              ) : null}
+              <label>
+                Email address
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  autoComplete="email"
+                  required
+                />
+              </label>
+              <label>
+                Password
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  autoComplete={
+                    createAccount ? "new-password" : "current-password"
+                  }
+                  minLength={6}
+                  required
+                />
+              </label>
+              <button className="button login-submit" disabled={busy}>
+                {busy
+                  ? "Please wait…"
+                  : createAccount
+                    ? "Create account"
+                    : "Sign in with email"}
+              </button>
+              <button
+                className="text-button"
+                type="button"
+                onClick={() => {
+                  setCreateAccount(!createAccount);
+                  setError("");
+                  setMessage("");
+                }}
+              >
+                {createAccount
+                  ? "Already have an account? Sign in"
+                  : "New to GateLog? Create an account"}
+              </button>
+            </form>
+            <div className="auth-divider">
+              <span>or</span>
+            </div>
+            <button
+              className="button google-login"
+              type="button"
+              onClick={googleSignIn}
+              disabled={busy}
+            >
+              <span className="google-mark">G</span> Continue with Google{" "}
+              <span aria-hidden="true">↗</span>
+            </button>
+            {currentUser?.emailVerified ? (
+              <button
+                className="button secondary login-continue"
+                type="button"
+                disabled={busy}
+                onClick={() => run(() => finishSignIn(currentUser))}
+              >
+                Continue as {currentUser.displayName || currentUser.email}
+              </button>
+            ) : null}
+          </>
+        )}
+        {message ? (
+          <div className="login-success" role="status">
+            {message}
+          </div>
+        ) : null}
+        {error ? (
+          <div className="login-alert" role="alert">
+            <strong>Sign-in didn’t finish</strong>
+            <span>{error}</span>
+          </div>
+        ) : null}
       </section>
     </main>
   );

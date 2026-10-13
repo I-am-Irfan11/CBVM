@@ -1,4 +1,5 @@
 import asyncio
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -48,6 +49,10 @@ def create_app(settings: Settings | None = None):
         try:
             if settings.app_env != "test" and not settings.jwt_secret_key:
                 raise RuntimeError("JWT_SECRET_KEY must be configured. Run scripts/bootstrap_env.py locally.")
+            if settings.demo_open_access and (
+                settings.app_env == "production" or os.getenv("VERCEL") == "1"
+            ):
+                raise RuntimeError("DEMO_OPEN_ACCESS is forbidden on a public deployment. Configure Firebase Authentication instead.")
             if settings.app_env == "production" and not settings.cookie_secure:
                 raise RuntimeError("Production requires COOKIE_SECURE=true and HTTPS.")
             client, db = await run_in_threadpool(connect, settings)

@@ -13,10 +13,6 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 DEMO_COOKIE = "gatelog_demo"
 
 
-class GoogleSessionRequest(BaseModel):
-    access_token: str = Field(min_length=20, max_length=8192)
-
-
 class LoginRequest(BaseModel):
     identifier: str = Field(min_length=1, max_length=254)
     password: str = Field(min_length=1, max_length=256)
@@ -30,11 +26,11 @@ class SignupRequest(BaseModel):
     department: str | None = Field(default=None, max_length=100)
 
 
-@router.post("/login")
-async def login(payload: LoginRequest, request: Request, response: Response):
+@router.post("/login", include_in_schema=False)
+async def test_login(payload: LoginRequest, request: Request, response: Response):
     settings = request.app.state.settings
-    if request.headers.get("origin") and request.headers["origin"] not in settings.cors_origins:
-        raise HTTPException(403, "Origin is not allowed")
+    if settings.app_env != "test":
+        raise HTTPException(404, "Use Firebase sign-in")
     result = await run_in_threadpool(request.app.state.auth.login, payload.identifier, payload.password,
                                     request.client.host if request.client else "unknown")
     response.set_cookie("gatelog_session", result["access_token"], max_age=result.pop("max_age"),
@@ -43,11 +39,11 @@ async def login(payload: LoginRequest, request: Request, response: Response):
     return result
 
 
-@router.post("/signup", status_code=201)
-async def signup(payload: SignupRequest, request: Request, response: Response):
+@router.post("/signup", status_code=201, include_in_schema=False)
+async def test_signup(payload: SignupRequest, request: Request, response: Response):
     settings = request.app.state.settings
-    if request.headers.get("origin") and request.headers["origin"] not in settings.cors_origins:
-        raise HTTPException(403, "Origin is not allowed")
+    if settings.app_env != "test":
+        raise HTTPException(404, "Create accounts through Firebase sign-in")
     result = await run_in_threadpool(request.app.state.auth.signup, payload.username, payload.email,
                                      payload.full_name, payload.password, payload.department,
                                      request.client.host if request.client else "unknown")
@@ -60,23 +56,19 @@ async def signup(payload: SignupRequest, request: Request, response: Response):
 @router.get("/config")
 def config(request: Request):
     settings = request.app.state.settings
-    auth_allowlist = any(
-        value.strip()
-        for value in (
-            settings.supabase_allowed_emails,
-            settings.supabase_allowed_domains,
-            settings.supabase_admin_emails,
-        )
-    )
-    return {"google_sign_in": bool(settings.supabase_url and settings.supabase_anon_key and auth_allowlist)}
+    return {"firebase_sign_in": bool(settings.firebase_project_id.strip())}
 
 
-@router.post("/google")
-async def google_session(payload: GoogleSessionRequest, request: Request, response: Response):
+class FirebaseSessionRequest(BaseModel):
+    id_token: str = Field(min_length=100, max_length=8192)
+
+
+@router.post("/firebase")
+async def firebase_session(payload: FirebaseSessionRequest, request: Request, response: Response):
     origin = request.headers.get("origin")
     if origin and origin not in request.app.state.settings.cors_origins:
         raise HTTPException(403, "Origin is not allowed")
-    user = await run_in_threadpool(request.app.state.auth.google_login, payload.access_token)
+    user = await run_in_threadpool(request.app.state.auth.firebase_login, payload.id_token)
     token, csrf, max_age = await run_in_threadpool(request.app.state.auth.create_session, user)
     settings = request.app.state.settings
     response.set_cookie(

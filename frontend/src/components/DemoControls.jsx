@@ -13,11 +13,13 @@ export default function DemoControls({ notify, refresh, mockAi = true }) {
   const [cameraError, setCameraError] = useState("");
   const [capturedFrame, setCapturedFrame] = useState("");
   const [readiness, setReadiness] = useState(null);
+  const [lastResults, setLastResults] = useState(null);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
   useEffect(() => {
     let active = true;
+    if (!mockAi) return undefined;
     api("/vehicles?limit=100")
       .then((data) => {
         if (!active) return;
@@ -31,7 +33,7 @@ export default function DemoControls({ notify, refresh, mockAi = true }) {
     return () => {
       active = false;
     };
-  }, [notify]);
+  }, [notify, mockAi]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -142,6 +144,7 @@ export default function DemoControls({ notify, refresh, mockAi = true }) {
     if (!video || !canvas || !cameraReady) return;
     if (mockAi && !vehicleId) return;
     setPending(true);
+    setLastResults(null);
     try {
       if (mockAi) {
         await frameBlob();
@@ -150,6 +153,7 @@ export default function DemoControls({ notify, refresh, mockAi = true }) {
           body: { vehicle_id: vehicleId, direction },
         });
         notify(describeOutcome(data), false);
+        setLastResults([describeOutcome(data)]);
       } else {
         const blob = await frameBlob();
         const response = await fetch(
@@ -170,11 +174,15 @@ export default function DemoControls({ notify, refresh, mockAi = true }) {
             payload.detail || `Recognition failed (${response.status})`,
           );
         if (!payload.results?.length) {
+          setLastResults([
+            "No plate detected. Move closer, keep the plate level and retry.",
+          ]);
           notify(
             "No plate detected in this frame. Move closer and retry.",
             true,
           );
         } else {
+          setLastResults(payload.results.map(describeOutcome));
           payload.results.forEach((item) =>
             notify(describeOutcome(item), item.outcome === "review"),
           );
@@ -191,11 +199,13 @@ export default function DemoControls({ notify, refresh, mockAi = true }) {
   return (
     <section className="demo-panel">
       <div className="demo-intro">
-        <span className="eyebrow">LAPTOP CAMERA DEMO</span>
+        <span className="eyebrow">
+          {mockAi ? "SIMULATION" : "CAMERA CAPTURE"}
+        </span>
         <h3>Capture a gate scan</h3>
         <p>
-          Allow camera access, frame the vehicle, and capture a still for the
-          demo.
+          Hold the plate level in good light. Capture a clear frame to check its
+          reading.
         </p>
       </div>
       <div className="demo-camera">
@@ -234,10 +244,10 @@ export default function DemoControls({ notify, refresh, mockAi = true }) {
             : "The frame is sent to real YOLO plate detection plus OCR. Low-confidence or unknown plates land in the review queue."}
         </p>
         {!mockAi && readiness && !readiness.ready ? (
-          <p className="demo-camera-error" role="alert">
-            Real recognition is not ready:{" "}
-            {(readiness.dependencies || []).join(" ")}
-          </p>
+          <details className="recognition-status">
+            <summary>Recognition needs setup · view details</summary>
+            <p>{(readiness.dependencies || []).join(" ")}</p>
+          </details>
         ) : null}
       </div>
       <div className="demo-controls">
@@ -260,9 +270,7 @@ export default function DemoControls({ notify, refresh, mockAi = true }) {
             </select>
           </>
         ) : null}
-        <label className="sr-only" htmlFor="mock-direction">
-          Direction
-        </label>
+        <label htmlFor="mock-direction">Direction</label>
         <select
           id="mock-direction"
           value={direction}
@@ -285,7 +293,12 @@ export default function DemoControls({ notify, refresh, mockAi = true }) {
             <button
               className="button"
               onClick={captureAndRecord}
-              disabled={pending || !cameraReady || (mockAi && !vehicleId)}
+              disabled={
+                pending ||
+                !cameraReady ||
+                (mockAi && !vehicleId) ||
+                (!mockAi && !readiness?.ready)
+              }
             >
               <ScanLine size={17} />
               {pending ? "Recording…" : "Capture & record scan"}
@@ -306,6 +319,18 @@ export default function DemoControls({ notify, refresh, mockAi = true }) {
           </p>
         ) : null}
       </div>
+      {lastResults ? (
+        <div className="scan-result" role="status">
+          <strong>
+            Last capture · {mockAi ? "simulated result" : "recognition result"}
+          </strong>
+          <ul>
+            {lastResults.map((result, index) => (
+              <li key={index}>{result}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </section>
   );
 }

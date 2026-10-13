@@ -35,11 +35,11 @@ class Settings(BaseSettings):
     jwt_access_token_expire_minutes: int = Field(default=60, ge=1, le=1440)
     cookie_secure: bool = False
     seed_operational_data: bool = False
-    supabase_url: str = ""
-    supabase_anon_key: str = ""
-    supabase_allowed_emails: str = ""
-    supabase_allowed_domains: str = ""
-    supabase_admin_emails: str = ""
+    firebase_project_id: str = ""
+    firebase_allowed_emails: str = ""
+    firebase_allowed_domains: str = ""
+    firebase_allowed_uids: str = ""
+    firebase_admin_emails: str = ""
     r2_endpoint_url: str = ""
     retain_scan_images: bool = False
     r2_bucket: str = ""
@@ -47,8 +47,7 @@ class Settings(BaseSettings):
     r2_secret_access_key: str = ""
     r2_presigned_url_expiry_seconds: int = Field(default=300, ge=30, le=3600)
     enable_demo_reset: bool = False
-    # Demo bypass: serve every visitor a dummy entrance and skip all credential,
-    # session and CSRF checks. Never enable on a public deployment.
+    # Development-only bypass. Production startup rejects this setting.
     demo_open_access: bool = False
     reconnect_delay_seconds: float = Field(default=1, gt=0, le=60)
 

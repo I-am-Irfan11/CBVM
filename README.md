@@ -2,7 +2,7 @@
 
 ANPR-based campus vehicle movement and trip-purpose logging, built with FastAPI, MongoDB/PyMongo, React, Vite and Tailwind CSS.
 
-GateLog is an ANPR-based campus gate operations system built with FastAPI, MongoDB/PyMongo, React, Vite and Tailwind CSS. It supports Google sign-in through Supabase Auth, vehicle entry and exit, visitor and bus workflows, human review of uncertain plates, audit records, analytics and CSV exports. The registry-driven simulator uses a vehicle entered through the website; persistent use requires MongoDB, and real ANPR requires separately supplied model weights and OCR software.
+GateLog is an ANPR-based campus gate operations system built with FastAPI, MongoDB/PyMongo, React, Vite and Tailwind CSS. It supports Firebase sign-in with Google and email/password, vehicle entry and exit, visitor and bus workflows, human review of uncertain plates, audit records, analytics and CSV exports. Persistent use requires MongoDB. Real ANPR requires separately trained model weights; this project can use either a plate-box detector with Tesseract OCR or the supplied character-box model dataset.
 
 ## Start on Windows
 
@@ -16,7 +16,7 @@ cd D:\GateLog
 .\scripts\run_backend.bat
 ```
 
-Setup creates a private `.env` when needed and generates a local JWT secret. Existing `.env` values are preserved. Configure Supabase Auth with Google and set the Supabase variables described below before hosting GateLog. Open a second terminal:
+Setup creates a private `.env` when needed and generates a local JWT secret. Existing `.env` values are preserved. Configure Firebase Authentication and set the Firebase variables described below before hosting GateLog. Open a second terminal:
 
 ```powershell
 cd D:\GateLog
@@ -47,7 +47,7 @@ Install Python 3.10+ and Node.js 22+, then run `bash scripts/setup.sh`. Start th
 
 ## Authentication and roles
 
-Sign in with your GateLog account (username or email plus a GateLog password of at least 12 characters) or create one from the sign-up screen. New self-registered accounts always receive the security role; the first administrator is created with `scripts/create_admin.py` and administrators manage roles from User access. The backend issues a short-lived, HttpOnly session cookie and enforces CSRF checks for writes. The frontend API remains same-origin at `/api`.
+Sign in through Firebase with Google or email/password. Administrators are assigned through `FIREBASE_ADMIN_EMAILS` or the User access page. The backend verifies Firebase tokens, issues a short-lived HttpOnly session cookie and enforces CSRF checks for writes. The frontend API remains same-origin at `/api`.
 
 Vehicle registry, plate readings, movement history, review decisions and audit records belong in MongoDB Atlas (`DATABASE_MODE=mongodb`). Original uploaded ANPR images can be stored in a private Cloudflare R2 bucket. Create a bucket-scoped R2 API token and set `R2_ENDPOINT_URL`, `R2_BUCKET`, `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY`. GateLog stores only the private object key beside the detection record; an operator can request a short-lived signed read URL from `/anpr/scans/{object_key}`. The upload is skipped when R2 is not configured. Add an R2 lifecycle rule for the `scans/` prefix matching your retention policy (90 days by default).
 
@@ -87,7 +87,7 @@ frontend/
     pages/        dashboard
     services/     API client
   tests/          browser workflow and mobile layout tests
-database/seed/    deterministic fictional vehicles and sanitized HITS route references
+database/seed/    deterministic demo inputs for isolated development
 models/          model installation boundary
 scripts/         Windows setup, server, seed and test commands
 docs/            architecture and report alignment
@@ -133,8 +133,8 @@ All backend variables are read from the repository-root .env regardless of worki
 | DATABASE_MODE | memory (explicit ephemeral adapter), or mongodb |
 | MONGODB_URI | Local URI; mongodb+srv supported |
 | MONGODB_DATABASE | gatelog |
-| USE_MOCK_AI | true; selects mock vs real ANPR |
-| SEED_ON_STARTUP | true; creates gate camera records and historical transport references |
+| USE_MOCK_AI | false; selects mock vs real ANPR |
+| SEED_ON_STARTUP | false; creates configured development seed records |
 | YOLO_MODEL_PATH | models/license_plate.pt; custom plate weights |
 | OCR_CONFIDENCE_THRESHOLD | 0.80; inclusive acceptance threshold |
 | DUPLICATE_COOLDOWN_SECONDS | 30; same vehicle, camera and direction |
@@ -148,6 +148,10 @@ All backend variables are read from the repository-root .env regardless of worki
 | CORS_ORIGINS | JSON array of frontend origins; also checked for WebSockets |
 | CAMPUS_TIMEZONE | Asia/Kolkata; day-boundary calculation |
 | RETENTION_DAYS | 90; completed/resolved records and audit retention |
+| FIREBASE_PROJECT_ID | Firebase project ID used to verify Firebase ID tokens on the backend |
+| FIREBASE_ALLOWED_EMAILS / FIREBASE_ALLOWED_DOMAINS | Comma-separated sign-in allowlist; add your own account and permitted operators. `*` permits every identity |
+| FIREBASE_ALLOWED_UIDS | Optional comma-separated Firebase user IDs when phone access is managed by UID |
+| FIREBASE_ADMIN_EMAILS | Comma-separated verified email accounts assigned the GateLog administrator role |
 | R2_ENDPOINT_URL / R2_BUCKET | R2 S3 endpoint and private bucket name |
 | R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY | Bucket-scoped R2 S3 credentials; backend only |
 | R2_PRESIGNED_URL_EXPIRY_SECONDS | Signed scan image link lifetime; 300 seconds by default |
@@ -156,6 +160,12 @@ All backend variables are read from the repository-root .env regardless of worki
 | VITE_API_URL | /api; public API base path the frontend calls (override with an absolute origin when the API is on a different hostname) |
 
 Change frontend settings before rebuilding/restarting Vite. UI timestamps are explicitly shown in IST. Source FPS and FRAME_SAMPLE_RATE are different: sampling reduces inference calls; it is not a hardware performance guarantee.
+
+## Firebase sign-in
+
+Enable Google and Email/Password in Firebase Authentication. Add `cbvm.vercel.app` and `localhost` to Firebase's authorized domains. In Vercel, set the five public `VITE_FIREBASE_*` web-app values and backend `FIREBASE_PROJECT_ID`; these are Firebase client settings, not database credentials. Add your email to `FIREBASE_ADMIN_EMAILS` to receive the admin role. Other users need to be added in User access first or included in `FIREBASE_ALLOWED_EMAILS` (or an allowed domain). Unknown accounts are denied if no allowlist or invitation exists. GateLog verifies Firebase ID-token signatures and claims, then creates its own HttpOnly session; Firebase handles passwords. Never put MongoDB or JWT secrets in `VITE_*` variables.
+
+The browser login offers email/password account creation and sign-in plus Google popup sign-in. The first administrator can be invited with `scripts/create_admin.py` or automatically granted by `FIREBASE_ADMIN_EMAILS`. Production never accepts GateLog-local passwords; legacy password endpoints are enabled only in automated tests.
 
 ## ANPR and video
 
@@ -169,7 +179,7 @@ To enable real recognition:
 .\.venv\Scripts\python.exe -m pip install -r backend\requirements-ai.txt
 ```
 
-Install the Tesseract executable on PATH, provide licensed custom plate-detector YOLO weights, set USE_MOCK_AI=false and YOLO_MODEL_PATH, then restart. Neither weights nor optional AI dependencies are loaded until recognition is requested. No models are downloaded automatically. A GPU is optional. See models/README.md for the boundary and platform compatibility.
+Set `USE_MOCK_AI=false` and `YOLO_MODEL_PATH` to the trained `.pt` file, install `backend/requirements-ai.txt` in the local backend environment, and restart. The Roboflow character-box model does not need Tesseract; a single-class full-plate detector does. No weights are downloaded automatically or committed. For the laptop webcam demo, run the backend locally on the laptop and open the site over HTTPS or localhost. Vercel's serverless backend is not the place to run a webcam or load large PyTorch weights. See models/README.md for details.
 
 Mock mode does not interpret uploaded pixels; use the dashboard simulator to exercise a vehicle currently in the registry. The image endpoint accepts **raw PNG/JPEG bytes**, not multipart:
 
@@ -195,9 +205,8 @@ For continuous video set RUN_VIDEO_WORKER=true, choose VIDEO_SOURCE, configure t
 | GET | /logs/today | Visits entering or exiting within the campus day |
 | GET | /dashboard /activity | Live operational summary and activity |
 | GET / POST / PUT | /visitors | Visitor registration and host/visit details |
-| GET / POST / PUT | /buses | Bus registry linked to vehicle and route references |
+| GET / POST / PUT | /buses | Bus registry linked to a registered vehicle and operator-entered route |
 | POST | /buses/{id}/trips and /trips/return | Departure and return records linked to gate movements |
-| GET | /transport/routes | Historical official HITS route references |
 | GET / POST / PUT | /cameras | Camera configuration and health records |
 | GET / POST / PUT | /purposes | Configurable trip purposes (admin writes) |
 | GET | /analytics | Filtered daily/hourly counts, purpose and vehicle summaries |
@@ -210,9 +219,8 @@ For continuous video set RUN_VIDEO_WORKER=true, choose VIDEO_SOURCE, configure t
 | GET | /reviews | Pending uncertain/unknown detections |
 | POST | /reviews/{id}/resolve | Confirm/correct or reject a reading with audit record |
 | POST | /reviews/{id}/dismiss | Dismiss without recording a movement |
-| POST | /auth/login /auth/signup | GateLog credential sign-in / self-registration (security role) |
 | GET | /auth/config /auth/me | Auth setup status / signed-in identity and CSRF token |
-| POST | /auth/google | Exchange a verified Supabase Google session for a GateLog session |
+| POST | /auth/firebase | Verify a Firebase ID token and issue a protected GateLog session |
 | POST | /auth/logout | Sign out of GateLog |
 | GET | /health | Database health and persistence mode |
 | WS | /ws/events | Live notifications and heartbeat |
@@ -254,8 +262,6 @@ Do not interpret tests with injected OCR/detectors as measured real recognition 
 
 ## Current phase boundaries
 
-HITS route data is historical: the official page labels the timetable 2023–2024. See [transport source notes](docs/transport-source.md); route names and bus names are reference data, not proof of current service. The snapshot deliberately omits stop times that were not included in the sanitized seed. The official-page importer can refresh only after the source site is reachable.
-
 Run **one Uvicorn worker**: movement locks and the WebSocket hub are process-local. Multi-process production deployment needs shared event delivery, distributed movement coordination and transactional state/audit writes. The capture worker currently runs one configured source per backend process. PDF export is not included; CSV export is implemented. Real OCR accuracy and camera throughput have not been measured.
 
 ## Troubleshooting
@@ -263,13 +269,13 @@ Run **one Uvicorn worker**: movement locks and the WebSocket hub are process-loc
 - **Python/npm not found:** install the prerequisites with PATH enabled and reopen the terminal. Use npm.cmd in PowerShell if npm.ps1 is blocked by execution policy.
 - **MongoDB server selection timeout:** verify the service/URI, Atlas IP allowlist and credentials; health never pretends the server is available. For disposable demos select DATABASE_MODE=memory explicitly.
 - **Empty data after restart:** expected in memory mode. Use MongoDB for persistence.
-- **Missing model/OCR:** mock mode needs neither. Real image requests return 503 until weights, optional packages and Tesseract are configured.
+- **Missing model:** real image requests return 503 until weights and Ultralytics are installed. A character-box model does not need Tesseract; a one-class plate-box model does.
+- **Firebase sign-in unavailable:** check the Vercel `VITE_FIREBASE_*` web-app settings, backend `FIREBASE_PROJECT_ID`, the authorized domain in Firebase, and the backend allowlist.
 - **Camera offline:** check VIDEO_SOURCE, address/path, CAMERA_ID and model dependencies. Live sources retry; MP4 ends normally when its frames run out.
 - **No real-time connection:** check the API origin and CORS_ORIGINS including scheme, hostname and port. WebSocket route is /ws/events; the UI refetches on reconnect.
 - **Port in use:** stop the existing GateLog process or adjust both server command and VITE_API_URL/CORS settings.
 - **Entry ignored after a rapid round trip:** the configured same-direction cooldown is working. Wait or reduce the cooldown for a controlled demo.
 - **Old records still present:** MongoDB TTL deletion is asynchronous; pending reviews and open visits intentionally have no expiry.
 - **Test dependency warnings on Python 3.14:** mongomock and Starlette emit upstream deprecation warnings; these are not assertion failures. The tested versions are recorded in backend/requirements-lock.txt.
-- **Google sign-in unavailable:** check the Cloudflare Access team domain, application AUD tag, Google identity provider, and allowed-email policy. Keep the backend behind the Access-protected Cloudflare Tunnel.
 
 Framework references: [FastAPI lifespan](https://fastapi.tiangolo.com/advanced/events/), [MongoDB partial indexes](https://www.mongodb.com/docs/manual/core/index-partial/), [Tailwind with Vite](https://tailwindcss.com/docs/installation/using-vite).

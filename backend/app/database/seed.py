@@ -4,7 +4,6 @@ from uuid import NAMESPACE_URL, uuid5
 
 from app.core.config import ROOT, Settings
 from app.database.connection import connect
-from app.database.transport import SNAPSHOT, seed_transport
 from app.models.documents import Bus, Camera
 
 
@@ -62,8 +61,6 @@ def seed(db, settings):
         db.cameras.update_one(
             {"_id": f"main-gate-{direction.lower()}"}, {"$setOnInsert": camera.model_dump()}, upsert=True
         )
-    if SNAPSHOT.exists():
-        seed_transport(db)
 
 
 if __name__ == "__main__":

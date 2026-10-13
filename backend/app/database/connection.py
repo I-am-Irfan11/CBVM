@@ -27,7 +27,6 @@ def create_indexes(db):
     db.sessions.create_index("expires_at", expireAfterSeconds=0)
     db.sessions.create_index("user_id")
     db.login_attempts.create_index("expires_at", expireAfterSeconds=0)
-    db.transport_routes.create_index("route_number", unique=True)
     db.visitors.create_index([("host_department", ASCENDING), ("created_at", DESCENDING)])
     db.bus_trips.create_index("vehicle_id", unique=True, partialFilterExpression={"status": "AWAY"})
     db.bus_trips.create_index([("vehicle_id", ASCENDING), ("departure_time", DESCENDING)])

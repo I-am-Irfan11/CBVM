@@ -5,9 +5,9 @@ import {
   CarFront,
   ArrowRight,
   CircleParking,
+  ScanLine,
 } from "lucide-react";
 import { Badge, Card, Plate, Table, duration, time } from "../components/ui";
-import DemoControls from "../components/DemoControls";
 
 export function ActivityTable({ rows, navigate }) {
   return (
@@ -99,6 +99,16 @@ export default function Dashboard({ data, navigate, notify, refresh }) {
           })}
         </div>
       </div>
+      <div className="scan-launch">
+        <div>
+          <span className="eyebrow">MAIN GATE</span>
+          <h2>Ready for the next arrival</h2>
+          <p>Open the camera to capture a plate and record an entry or exit.</p>
+        </div>
+        <button className="button" onClick={() => navigate("scan")}>
+          <ScanLine size={19} /> Open scanner <ArrowRight size={17} />
+        </button>
+      </div>
       <div className="stats-grid">
         {stats.map(([label, value, Icon, description], index) => (
           <Card key={label} className={`stat-card stat-${index}`}>
@@ -121,7 +131,10 @@ export default function Dashboard({ data, navigate, notify, refresh }) {
             View all <ArrowRight size={16} />
           </button>
         </div>
-        <ActivityTable rows={data.recent_activity} navigate={navigate} />
+        <ActivityTable
+          rows={(data.recent_activity || []).slice(0, 5)}
+          navigate={navigate}
+        />
       </Card>
       <div className="section-heading dashboard-section-heading">
         <div>
@@ -134,7 +147,7 @@ export default function Dashboard({ data, navigate, notify, refresh }) {
       </div>
       <Card>
         <Table
-          rows={data.inside_rows || []}
+          rows={(data.inside_rows || []).slice(0, 5)}
           empty="No vehicles are currently recorded inside campus."
           columns={[
             {
@@ -186,7 +199,7 @@ export default function Dashboard({ data, navigate, notify, refresh }) {
               <h2>Readings needing attention</h2>
             </div>
             <Badge tone={data.unknown_vehicles ? "amber" : "green"}>
-              {data.pending_reviews?.length || 0}
+              {data.pending_reviews || 0}
             </Badge>
           </div>
           <div className="panel-body">
@@ -246,7 +259,6 @@ export default function Dashboard({ data, navigate, notify, refresh }) {
           </div>
         </Card>
       </div>
-      <DemoControls notify={notify} refresh={refresh} mockAi={data.mock_ai} />
     </>
   );
 }

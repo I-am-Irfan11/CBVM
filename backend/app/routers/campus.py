@@ -37,7 +37,8 @@ def list_purposes(request: Request, include_inactive: bool = False, user=Depends
 
 @router.post("/purposes", status_code=201)
 def create_purpose(payload: PurposeInput, request: Request, user=Depends(administrator)):
-    row = {"_id": str(uuid4()), **payload.model_dump()}
+    row = {"_id": str(uuid4()), **payload.model_dump(), "route": payload.route_number}
+    row.pop("route_number", None)
     try:
         request.app.state.db.purposes.insert_one(row)
     except DuplicateKeyError:
@@ -161,11 +162,9 @@ def create_bus(payload: BusInput, request: Request, user=Depends(administrator))
     vehicle = db.vehicles.find_one({"_id": payload.vehicle_id, "vehicle_type": "bus"})
     if not vehicle:
         raise HTTPException(422, "Select a registered bus vehicle")
-    route = db.transport_routes.find_one({"route_number": payload.route_number})
-    if not route:
-        raise HTTPException(422, "Select an installed official route reference")
-    row = {"_id": str(uuid4()), **payload.model_dump(), "route": route["route_name"] if route else payload.route_number,
-           "route_reference_id": route.get("_id") if route else None, "route_reference_source": route.get("source_url") if route else None}
+    row_data = payload.model_dump()
+    row_data["route"] = row_data.pop("route_number")
+    row = {"_id": str(uuid4()), **row_data}
     try:
         db.buses.insert_one(row)
     except DuplicateKeyError:
@@ -192,12 +191,8 @@ def update_bus(bus_id: str, payload: BusInput, request: Request, user=Depends(ad
     vehicle = db.vehicles.find_one({"_id": payload.vehicle_id, "vehicle_type": "bus"})
     if not vehicle:
         raise HTTPException(422, "Select a registered bus vehicle")
-    route = db.transport_routes.find_one({"route_number": payload.route_number})
-    if not route:
-        raise HTTPException(422, "Select an installed official route reference")
-    changes = {**payload.model_dump(), "route": route["route_name"] if route else payload.route_number,
-               "route_reference_id": route.get("_id") if route else None,
-               "route_reference_source": route.get("source_url") if route else None}
+    changes = payload.model_dump()
+    changes["route"] = changes.pop("route_number")
     try:
         row = db.buses.find_one_and_update({"_id": bus_id}, {"$set": changes}, return_document=ReturnDocument.AFTER)
     except DuplicateKeyError:
@@ -262,11 +257,6 @@ async def return_bus(bus_id: str, request: Request, user=Depends(operator)):
     await request.app.state.hub.publish("vehicle.entry", movement["log"])
     await request.app.state.hub.publish("bus.returned", public(row))
     return public(row)
-
-
-@router.get("/transport/routes")
-def transport_routes(request: Request, user=Depends(current_user)):
-    return [public(row) for row in request.app.state.db.transport_routes.find().sort("route_number", 1)]
 
 
 @router.get("/cameras")
@@ -460,10 +450,11 @@ def list_users(request: Request, user=Depends(administrator)):
 def create_user(payload: UserInput, request: Request, user=Depends(administrator)):
     data = payload.model_dump()
     password = data.pop("password")
-    if not password:
-        raise HTTPException(422, "A GateLog account password of at least 12 characters is required")
-    row = {"_id": str(uuid4()), **data, "auth_provider": "local", "password_hash": password_hash(password),
+    row = {"_id": str(uuid4()), **data, "auth_provider": "firebase-invited",
            "created_at": utcnow(), "updated_at": utcnow()}
+    if request.app.state.settings.app_env == "test" and password:
+        row["auth_provider"] = "local"
+        row["password_hash"] = password_hash(password)
     try:
         request.app.state.db.users.insert_one(row)
     except DuplicateKeyError:
@@ -480,12 +471,12 @@ def update_user(user_id: str, payload: UserInput, request: Request, user=Depends
         raise HTTPException(404, "User not found")
     changes = payload.model_dump()
     password = changes.pop("password")
-    if password:
+    if request.app.state.settings.app_env == "test" and password:
         changes["password_hash"] = password_hash(password)
     if user_id == user["_id"] and (not payload.active or payload.role != "admin"):
         raise HTTPException(409, "You cannot disable or demote your own administrator account")
     changes["updated_at"] = utcnow()
-    if not payload.active or password or payload.role != old["role"] or payload.department != old.get("department"):
+    if not payload.active or payload.role != old["role"] or payload.department != old.get("department"):
         db.sessions.delete_many({"user_id": user_id})
     try:
         row = db.users.find_one_and_update({"_id": user_id}, {"$set": changes}, return_document=ReturnDocument.AFTER)
