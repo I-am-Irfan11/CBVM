@@ -113,6 +113,10 @@ class AuthService:
         if not project_id:
             raise HTTPException(503, "Firebase sign-in is not configured on the GateLog server.")
 
+        if "RS256" not in jwt.algorithms.get_default_algorithms():
+            logger.error("Firebase verification requires PyJWT[crypto] in the backend installation")
+            raise HTTPException(503, "The server's sign-in verifier is missing a required dependency. Contact the administrator.")
+
         try:
             signing_key = jwt.PyJWKClient(
                 "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com",
@@ -129,6 +133,9 @@ class AuthService:
             )
         except jwt.ExpiredSignatureError:
             raise HTTPException(401, "Your Firebase sign-in expired. Please sign in again.") from None
+        except jwt.PyJWKClientConnectionError as error:
+            logger.warning("Firebase signing-key retrieval failed (%s)", type(error).__name__)
+            raise HTTPException(503, "Could not reach Firebase to verify sign-in. Please retry.") from None
         except (jwt.InvalidTokenError, jwt.PyJWKClientError, ValueError) as error:
             logger.info("Firebase token verification rejected (%s)", type(error).__name__)
             raise HTTPException(401, "Could not verify your Firebase sign-in. Please retry.") from None
