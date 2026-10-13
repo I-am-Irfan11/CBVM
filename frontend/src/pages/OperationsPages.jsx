@@ -235,13 +235,12 @@ export default function OperationsPages({
         ) : null}
         {visitorOpen ? (
           <Card>
-            <h2>Register an unknown vehicle</h2>
+            <h2>Record a vehicle arrival</h2>
             <form
               className="ops-form"
               onSubmit={(e) => {
                 e.preventDefault();
                 const form = new FormData(e.currentTarget);
-                const expected = form.get("expected_exit_time");
                 act(
                   () =>
                     api("/visitors", {
@@ -249,13 +248,7 @@ export default function OperationsPages({
                       body: {
                         number_plate: form.get("plate"),
                         visitor_name: form.get("name"),
-                        organization: form.get("organization") || null,
                         phone: form.get("phone") || null,
-                        host_department: form.get("department"),
-                        person_to_visit: form.get("person"),
-                        expected_exit_time: expected
-                          ? new Date(expected).toISOString()
-                          : null,
                         purpose: form.get("purpose"),
                         custom_purpose: form.get("custom") || null,
                         camera_id: "main-gate-in",
@@ -281,28 +274,12 @@ export default function OperationsPages({
                 />
               </label>
               <label>
-                Visitor name
+                Person or student name
                 <input name="name" required />
-              </label>
-              <label>
-                Organization
-                <input name="organization" />
               </label>
               <label>
                 Phone (optional)
                 <input name="phone" />
-              </label>
-              <label>
-                Host department
-                <input name="department" required />
-              </label>
-              <label>
-                Person to visit
-                <input name="person" required />
-              </label>
-              <label>
-                Expected exit time
-                <input name="expected_exit_time" type="datetime-local" />
               </label>
               <label>
                 Purpose
@@ -317,7 +294,7 @@ export default function OperationsPages({
                 <input name="custom" />
               </label>
               <button className="button" disabled={pending}>
-                Save visitor and record entry
+                Record entry
               </button>
             </form>
           </Card>
@@ -334,9 +311,6 @@ export default function OperationsPages({
                   label: "Plate",
                   render: (row) => row.number_plate || row.vehicle_id,
                 },
-                { key: "organization", label: "Organization" },
-                { key: "host_department", label: "Host department" },
-                { key: "person_to_visit", label: "Person to visit" },
                 { key: "purpose", label: "Purpose" },
                 {
                   key: "created_at",
@@ -360,6 +334,21 @@ export default function OperationsPages({
             </button>
           </div>
         ) : null}
+        <Card>
+          <h2>College buses in the published timetable</h2>
+          <p className="muted">
+            The timetable lists route bus names only. Add each vehicle’s actual registration plate in Vehicle registry before recording trips.
+          </p>
+          <Table
+            rows={routes.data || []}
+            empty="College route timetable is loading or unavailable."
+            columns={[
+              { key: "bus_name", label: "College bus name" },
+              { key: "route_number", label: "Route" },
+              { key: "route_name", label: "Area" },
+            ]}
+          />
+        </Card>
         {busOpen ? (
           <Card>
             <h2>Link registered bus</h2>
@@ -437,7 +426,7 @@ export default function OperationsPages({
           <Card>
             <Table
               rows={state.data || []}
-              empty="No bus records are configured."
+              empty="No buses with vehicle registration plates are configured yet."
               columns={[
                 { key: "bus_number", label: "Bus" },
                 { key: "route", label: "Route" },

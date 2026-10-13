@@ -11,8 +11,8 @@ class Visitor(BaseModel):
     visitor_name: str
     organization: str | None = None
     phone: str | None = None
-    host_department: str
-    person_to_visit: str
+    host_department: str | None = None
+    person_to_visit: str | None = None
     expected_exit_time: datetime | None = None
 
 

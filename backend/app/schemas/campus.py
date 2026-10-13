@@ -22,8 +22,8 @@ class VisitorInput(StrictModel):
     visitor_name: str = Field(min_length=1, max_length=100)
     organization: str | None = Field(default=None, max_length=120)
     phone: str | None = Field(default=None, max_length=30)
-    host_department: str = Field(min_length=1, max_length=100)
-    person_to_visit: str = Field(min_length=1, max_length=100)
+    host_department: str | None = Field(default=None, max_length=100)
+    person_to_visit: str | None = Field(default=None, max_length=100)
     expected_exit_time: datetime | None = None
     purpose: str = Field(default="Guest Visit", min_length=1, max_length=120)
     custom_purpose: str | None = Field(default=None, max_length=240)
