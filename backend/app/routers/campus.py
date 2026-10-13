@@ -347,25 +347,26 @@ async def resolve_review(review_id: str, payload: ReviewAction, request: Request
             if camera:
                 direction = (camera["direction"] if camera["direction"] in ("IN", "OUT")
                              else (old.get("direction") or payload.direction))
-        result = ops.move(vehicle["_id"], direction,
+        vehicle_id = vehicle.get("_id") or vehicle["id"]
+        result = ops.move(vehicle_id, direction,
                           Movement(camera_id=old["camera_id"], purpose=payload.purpose, custom_purpose=payload.custom_purpose,
                                    event_id=f"review:{review_id}",
                                    detection_confidence=1.0), detection=None,
                           verified_transition=newly_registered_visitor)
         movement = result["log"]
-        changes["vehicle_id"] = vehicle["_id"]
+        changes["vehicle_id"] = vehicle_id
         changes["corrected_plate"] = plate
         changes["custom_purpose"] = payload.custom_purpose if payload.purpose == "Other" else None
         if payload.visitor_name:
             visitor = {
-                "_id": str(uuid4()), "vehicle_id": vehicle["_id"], "number_plate": plate,
+                "_id": str(uuid4()), "vehicle_id": vehicle_id, "number_plate": plate,
                 "visitor_name": payload.visitor_name, "organization": payload.organization,
                 "phone": payload.phone, "expected_exit_time": None,
                 "purpose": payload.custom_purpose.strip() if payload.purpose == "Other" and payload.custom_purpose else payload.purpose,
                 "created_at": now, "created_by": user["_id"], "movement_id": movement["id"],
             }
             db.visitors.insert_one(visitor)
-            audit(ops, "visitor.register", new={"visitor_id": visitor["_id"], "vehicle_id": vehicle["_id"],
+            audit(ops, "visitor.register", new={"visitor_id": visitor["_id"], "vehicle_id": vehicle_id,
                 "number_plate": plate, "purpose": visitor["purpose"],
                 "movement_id": movement["id"]})
     row = db.review_items.find_one_and_update({"_id": review_id, "status": "pending"}, {"$set": changes},
