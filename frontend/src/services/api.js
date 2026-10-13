@@ -22,7 +22,13 @@ export async function api(path, options = {}) {
     },
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
   });
-  const data = await response.json();
+  const responseText = await response.text();
+  let data;
+  try {
+    data = responseText ? JSON.parse(responseText) : {};
+  } catch {
+    data = { detail: responseText || `Request failed (${response.status})` };
+  }
   if (!response.ok) {
     const detail = Array.isArray(data.detail)
       ? data.detail.map((item) => `${item.loc.at(-1)}: ${item.msg}`).join("; ")

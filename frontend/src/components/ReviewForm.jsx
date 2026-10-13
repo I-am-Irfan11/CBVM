@@ -28,8 +28,6 @@ export default function ReviewForm({ review, close, notify, refresh }) {
   const [visitorName, setVisitorName] = useState("");
   const [phone, setPhone] = useState("");
   const [organization, setOrganization] = useState("");
-  const [hostDepartment, setHostDepartment] = useState("");
-  const [personToVisit, setPersonToVisit] = useState("");
   const [pending, setPending] = useState(false);
   const [scanUrl, setScanUrl] = useState("");
   useEffect(() => {
@@ -66,8 +64,6 @@ export default function ReviewForm({ review, close, notify, refresh }) {
           visitor_name: visitorName || null,
           phone: phone || null,
           organization: organization || null,
-          host_department: hostDepartment || null,
-          person_to_visit: personToVisit || null,
           purpose,
           direction,
           custom_purpose: custom || null,
@@ -125,14 +121,6 @@ export default function ReviewForm({ review, close, notify, refresh }) {
       <label className="review-field">
         Organization (optional)
         <input value={organization} onChange={(e) => setOrganization(e.target.value)} />
-      </label>
-      <label className="review-field">
-        Host department (optional)
-        <input value={hostDepartment} onChange={(e) => setHostDepartment(e.target.value)} />
-      </label>
-      <label className="review-field">
-        Person to visit (optional)
-        <input value={personToVisit} onChange={(e) => setPersonToVisit(e.target.value)} />
       </label>
       <label className="review-field">
         Purpose

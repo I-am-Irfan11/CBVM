@@ -322,6 +322,7 @@ async def resolve_review(review_id: str, payload: ReviewAction, request: Request
         if not valid_plate(plate):
             raise HTTPException(422, "Correct the plate to a valid Indian registration")
         vehicle = db.vehicles.find_one({"number_plate": plate, "status": "active"})
+        newly_registered_visitor = False
         if not vehicle:
             if not payload.visitor_name:
                 raise HTTPException(422, "Enter the visitor's name to register this plate and confirm entry")
@@ -339,15 +340,18 @@ async def resolve_review(review_id: str, payload: ReviewAction, request: Request
             )
             vehicle = ops.update(existing["_id"], visitor_vehicle) if existing else ops.register(visitor_vehicle)
             direction = "IN"
+            newly_registered_visitor = True
         else:
             direction = old.get("direction") or "IN"
             camera = db.cameras.find_one({"_id": old["camera_id"]})
             if camera:
-                direction = camera["direction"] if camera["direction"] in ("IN", "OUT") else payload.direction
+                direction = (camera["direction"] if camera["direction"] in ("IN", "OUT")
+                             else (old.get("direction") or payload.direction))
         result = ops.move(vehicle["_id"], direction,
                           Movement(camera_id=old["camera_id"], purpose=payload.purpose, custom_purpose=payload.custom_purpose,
                                    event_id=f"review:{review_id}",
-                                   detection_confidence=1.0), detection=None)
+                                   detection_confidence=1.0), detection=None,
+                          verified_transition=newly_registered_visitor)
         movement = result["log"]
         changes["vehicle_id"] = vehicle["_id"]
         changes["corrected_plate"] = plate
@@ -359,12 +363,12 @@ async def resolve_review(review_id: str, payload: ReviewAction, request: Request
                 "phone": payload.phone, "host_department": payload.host_department,
                 "person_to_visit": payload.person_to_visit, "expected_exit_time": None,
                 "purpose": payload.custom_purpose.strip() if payload.purpose == "Other" and payload.custom_purpose else payload.purpose,
-                "created_at": now, "created_by": user["_id"], "movement_id": movement["_id"],
+                "created_at": now, "created_by": user["_id"], "movement_id": movement["id"],
             }
             db.visitors.insert_one(visitor)
             audit(ops, "visitor.register", new={"visitor_id": visitor["_id"], "vehicle_id": vehicle["_id"],
                 "number_plate": plate, "purpose": visitor["purpose"], "host_department": payload.host_department,
-                "movement_id": movement["_id"]})
+                "movement_id": movement["id"]})
     row = db.review_items.find_one_and_update({"_id": review_id, "status": "pending"}, {"$set": changes},
                                               return_document=ReturnDocument.AFTER)
     audit(ops, f"review.{payload.action}", old, row)
