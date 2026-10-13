@@ -5,6 +5,11 @@
       "root": "backend",
       "framework": "fastapi",
       "entrypoint": "app.main:app",
+      "functions": {
+        "app/**/*.py": {
+          "includeFiles": "models/license_plate.onnx"
+        }
+      },
       "routes": [
         {
           "src": "/api",

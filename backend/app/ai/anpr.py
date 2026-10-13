@@ -1,13 +1,15 @@
 from abc import ABC, abstractmethod
+import ast
 from datetime import datetime, timezone
 from pathlib import Path
 import re
+from types import SimpleNamespace
 from time import perf_counter
 from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from app.core.config import ROOT
+from app.core.config import resolve_model_path
 from app.core.plates import normalize_plate, valid_plate
 
 
@@ -76,12 +78,78 @@ class TesseractOCR(OCRService):
         return " ".join(text for text, _ in words), sum(conf for _, conf in words) / (100 * len(words))
 
 
+class RapidOCRService(OCRService):
+    """OCR fallback whose ONNX models are distributed with the Python package."""
+
+    def __init__(self):
+        self.engine = None
+
+    def read(self, image):
+        if self.engine is None:
+            from rapidocr_onnxruntime import RapidOCR
+
+            self.engine = RapidOCR()
+        result, _ = self.engine(image)
+        if not result:
+            return "", 0.0
+        words = [(str(item[1]).strip(), float(item[2])) for item in result if str(item[1]).strip()]
+        if not words:
+            return "", 0.0
+        return " ".join(word for word, _ in words), sum(score for _, score in words) / len(words)
+
+
+class ONNXYOLO:
+    """Small ONNX Runtime adapter for Ultralytics exports with embedded NMS."""
+
+    def __init__(self, path):
+        import onnxruntime as ort
+
+        self.session = ort.InferenceSession(str(path), providers=["CPUExecutionProvider"])
+        self.input_name = self.session.get_inputs()[0].name
+        metadata = self.session.get_modelmeta().custom_metadata_map
+        try:
+            self.names = ast.literal_eval(metadata.get("names", "{}"))
+        except (SyntaxError, ValueError):
+            self.names = {}
+        shape = self.session.get_inputs()[0].shape
+        self.input_height = int(shape[-2]) if isinstance(shape[-2], int) else 640
+        self.input_width = int(shape[-1]) if isinstance(shape[-1], int) else 640
+
+    def predict(self, frame, verbose=False):
+        import cv2
+        import numpy as np
+
+        height, width = frame.shape[:2]
+        scale = min(self.input_width / width, self.input_height / height)
+        resized_width, resized_height = round(width * scale), round(height * scale)
+        resized = cv2.resize(frame, (resized_width, resized_height), interpolation=cv2.INTER_LINEAR)
+        pad_x = (self.input_width - resized_width) / 2
+        pad_y = (self.input_height - resized_height) / 2
+        left, top = round(pad_x - 0.1), round(pad_y - 0.1)
+        right, bottom = self.input_width - resized_width - left, self.input_height - resized_height - top
+        padded = cv2.copyMakeBorder(resized, top, bottom, left, right, cv2.BORDER_CONSTANT, value=(114, 114, 114))
+        tensor = np.ascontiguousarray(padded[:, :, ::-1].transpose(2, 0, 1)[None], dtype=np.float32) / 255.0
+        output = self.session.run(None, {self.input_name: tensor})[0]
+        detections = []
+        for x1, y1, x2, y2, confidence, class_id in output.reshape(-1, 6):
+            x1 = max(0, min(width, int((x1 - pad_x) / scale)))
+            y1 = max(0, min(height, int((y1 - pad_y) / scale)))
+            x2 = max(0, min(width, int((x2 - pad_x) / scale)))
+            y2 = max(0, min(height, int((y2 - pad_y) / scale)))
+            if confidence <= 0 or x2 <= x1 or y2 <= y1:
+                continue
+            detections.append(SimpleNamespace(
+                xyxy=np.asarray([[x1, y1, x2, y2]], dtype=np.float32),
+                conf=np.asarray([confidence], dtype=np.float32),
+                cls=np.asarray([int(class_id)], dtype=np.float32),
+            ))
+        yield SimpleNamespace(boxes=detections, names=self.names)
+
+
 class RealANPRService(ANPRService):
     def __init__(self, settings, ocr: OCRService | None = None):
-        self.path = Path(settings.yolo_model_path)
-        if not self.path.is_absolute():
-            self.path = ROOT / self.path
-        self.ocr = ocr or TesseractOCR()
+        self.path = resolve_model_path(settings.yolo_model_path)
+        self.ocr = ocr or RapidOCRService()
         self.model = None
 
     def detect(self, frame):
@@ -91,9 +159,12 @@ class RealANPRService(ANPRService):
         if self.model is None:
             if not self.path.is_file():
                 raise RuntimeError("License-plate YOLO weights are missing; configure YOLO_MODEL_PATH")
-            from ultralytics import YOLO
+            if self.path.suffix.lower() == ".onnx":
+                self.model = ONNXYOLO(self.path)
+            else:
+                from ultralytics import YOLO
 
-            self.model = YOLO(str(self.path))
+                self.model = YOLO(str(self.path))
         names = getattr(self.model, "names", {})
         names = names.values() if isinstance(names, dict) else names
         self.character_labels = {str(name).strip().upper() for name in names}
@@ -127,6 +198,8 @@ class RealANPRService(ANPRService):
                 raw, ocr_confidence = self.ocr.read(crop)
                 # Keep the original OCR text for review; punctuation is not part of a plate.
                 plate = re.sub(r"[^A-Z0-9]", "", raw.upper())
+                if not plate:
+                    continue
                 confidence = min(float(box.conf[0]), max(0.0, min(1.0, ocr_confidence)))
                 rows.append(
                     Detection(

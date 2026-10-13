@@ -8,25 +8,25 @@ MAX_IMAGE_BYTES = 8 * 1024 * 1024
 
 def readiness(settings):
     import importlib.util
-    import shutil
     from pathlib import Path
-    from app.core.config import ROOT
-    path = Path(settings.yolo_model_path)
-    path = path if path.is_absolute() else ROOT / path
+    from app.core.config import resolve_model_path
+    path = resolve_model_path(settings.yolo_model_path)
     missing = []
     if not path.is_file():
-        missing.append("Trained license-plate YOLO weights are missing. Set YOLO_MODEL_PATH to a local .pt file.")
-    if importlib.util.find_spec("ultralytics") is None:
-        missing.append("Python package ultralytics is not installed. Install backend/requirements-ai.txt in the backend environment.")
-    if importlib.util.find_spec("pytesseract") is None:
-        missing.append("Install pytesseract from backend/requirements-ai.txt for plate text recognition.")
-    if not shutil.which("tesseract") and not Path("C:/Program Files/Tesseract-OCR/tesseract.exe").is_file():
-        missing.append("Install Tesseract OCR and add it to PATH for whole-plate recognition.")
+        missing.append("Trained plate model is missing. Set YOLO_MODEL_PATH to the model file.")
+    if path.suffix.lower() == ".onnx":
+        if importlib.util.find_spec("onnxruntime") is None:
+            missing.append("ONNX Runtime is not installed. Install backend/requirements.txt.")
+    else:
+        if importlib.util.find_spec("ultralytics") is None:
+            missing.append("Python package ultralytics is not installed. Install backend/requirements-ai.txt in the backend environment.")
+    if importlib.util.find_spec("rapidocr_onnxruntime") is None:
+        missing.append("RapidOCR is not installed. Install backend/requirements.txt.")
     message = (
         "Dependencies detected; recognition quality requires camera validation."
         if not missing else " ".join(missing)
     )
-    message += " Whole-plate detections use OCR; character-only detections are decoded from their labels."
+    message += " Character detections are assembled into plate text; whole-plate detections use the bundled OCR engine."
     return {"ready": not missing, "dependencies": missing, "message": message}
 
 

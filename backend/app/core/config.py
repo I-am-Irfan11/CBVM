@@ -7,6 +7,25 @@ from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 ROOT = Path(__file__).resolve().parents[3]
+BACKEND_ROOT = Path(__file__).resolve().parents[2]
+
+
+def resolve_model_path(configured_path: str) -> Path:
+    path = Path(configured_path)
+    if path.is_absolute():
+        return path
+    for candidate in (BACKEND_ROOT / path, ROOT / path):
+        if candidate.is_file():
+            return candidate
+    # Older Vercel settings may still point at the ignored .pt file. Prefer the
+    # checked-in ONNX export when that old path is absent.
+    if path.suffix.lower() == ".pt":
+        for candidate in (BACKEND_ROOT / "models/license_plate.onnx", ROOT / "models/license_plate.onnx"):
+            if candidate.is_file():
+                return candidate
+    return BACKEND_ROOT / path
+
+
 DEFAULT_CORS_ORIGINS = [
     "http://localhost:5173", "http://127.0.0.1:5173", "https://cbvm.vercel.app",
 ]
@@ -20,7 +39,7 @@ class Settings(BaseSettings):
     mongodb_database: str = "gatelog"
     use_mock_ai: bool = False
     seed_on_startup: bool = False
-    yolo_model_path: str = "models/license_plate.pt"
+    yolo_model_path: str = "models/license_plate.onnx"
     ocr_confidence_threshold: float = Field(default=0.8, ge=0, le=1)
     duplicate_cooldown_seconds: int = Field(default=30, ge=0)
     video_source: Literal["mock", "rtsp", "mp4", "webcam"] = "mock"
