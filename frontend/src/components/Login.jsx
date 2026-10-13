@@ -5,6 +5,7 @@ import {
   getRedirectResult,
   onAuthStateChanged,
   sendEmailVerification,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
   signInWithRedirect,
@@ -55,8 +56,12 @@ export default function Login({ onAuthenticated }) {
       setError(
         cause?.code === "auth/unauthorized-domain"
           ? "Add this website domain under Firebase Authentication → Settings → Authorized domains."
-          : cause?.message ||
-              "Sign-in could not be completed. Please try again.",
+          : cause?.code === "auth/invalid-credential"
+            ? "Wrong email or password, or no account exists yet — click “New to GateLog? Create an account” below first."
+            : cause?.code === "auth/operation-not-allowed"
+              ? "Email/password sign-in is switched off in the Firebase Console — enable it under Authentication → Sign-in method."
+              : cause?.message ||
+                "Sign-in could not be completed. Please try again.",
       );
     } finally {
       setBusy(false);
@@ -86,6 +91,22 @@ export default function Login({ onAuthenticated }) {
         password,
       );
       await finishSignIn(credential.user);
+    });
+  }
+
+  function forgotPassword() {
+    const address = email.trim();
+    if (!address) {
+      setError(
+        "Enter your email address above, then click “Forgot password?” again.",
+      );
+      return;
+    }
+    run(async () => {
+      await sendPasswordResetEmail(firebaseAuth, address);
+      setMessage(
+        "Password reset email sent. Check your inbox (and spam), open the link to set a new password, then sign in.",
+      );
     });
   }
 
@@ -175,6 +196,16 @@ export default function Login({ onAuthenticated }) {
                   ? "Already have an account? Sign in"
                   : "New to GateLog? Create an account"}
               </button>
+              {createAccount ? null : (
+                <button
+                  className="text-button"
+                  type="button"
+                  disabled={busy}
+                  onClick={forgotPassword}
+                >
+                  Forgot password?
+                </button>
+              )}
             </form>
             <div className="auth-divider">
               <span>or</span>
