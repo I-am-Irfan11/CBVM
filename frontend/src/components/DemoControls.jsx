@@ -23,6 +23,7 @@ export default function DemoControls({
   const [capturedFrame, setCapturedFrame] = useState("");
   const [readiness, setReadiness] = useState(null);
   const [lastResults, setLastResults] = useState(null);
+  const [missedScans, setMissedScans] = useState(0);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const scanningRef = useRef(false);
@@ -100,6 +101,7 @@ export default function DemoControls({
     setCameraPending(true);
     setCameraError("");
     setCapturedFrame("");
+    setMissedScans(0);
     try {
       if (!navigator.mediaDevices?.getUserMedia) {
         throw new Error(
@@ -228,6 +230,7 @@ export default function DemoControls({
         );
         const payload = await readResponse(response);
         if (!payload.results?.length) {
+          if (!manual) setMissedScans((count) => count + 1);
           if (manual) {
             setCapturedFrame(preview);
             setLastResults([
@@ -236,6 +239,7 @@ export default function DemoControls({
           }
           return false;
         } else {
+          setMissedScans(0);
           setCapturedFrame(preview);
           setLastResults(
             payload.results.map((item) =>
@@ -278,19 +282,6 @@ export default function DemoControls({
   }
 
   captureRef.current = captureAndRecord;
-
-  async function capturePlateNow() {
-    if (scanningRef.current || pending || !cameraReady || mockAi) return;
-    scanningRef.current = true;
-    setAutoScanEnabled(false);
-    try {
-      const shouldPause = await captureAndRecord({ manual: true });
-      if (!shouldPause) setAutoScanEnabled(true);
-    } finally {
-      scanningRef.current = false;
-      void drainRef.current?.();
-    }
-  }
 
   async function drainPhotoQueue() {
     if (scanningRef.current || !mounted.current || !photoQueue.current.length)
@@ -410,6 +401,29 @@ export default function DemoControls({
                 setAutoScanEnabled(true);
               }}
             />
+            {!mockAi ? (
+              <div className="manual-capture">
+                <button
+                  type="button"
+                  className="button"
+                  onClick={takeManualPhoto}
+                  disabled={!cameraReady || queuedPhotos >= 5}
+                >
+                  <Camera size={17} /> Capture plate now
+                </button>
+                <p className="demo-camera-note">
+                  Not detecting? Capture a photo to read the plate manually.
+                </p>
+                {queuedPhotos > 0 ? (
+                  <p role="status">
+                    {queuedPhotos} photo(s) captured and waiting for OCR.
+                    {queuedPhotos >= 5
+                      ? " Wait for a photo to finish before capturing another."
+                      : ""}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
             {capturedFrame ? (
               <img src={capturedFrame} alt="Last captured plate image" />
             ) : null}
@@ -437,7 +451,9 @@ export default function DemoControls({
                     ? vehicleId
                       ? "Demo scan will record automatically when ready."
                       : "Select a registered vehicle to start the demo scan."
-                    : "Scanning automatically. Show the next plate whenever you’re ready."
+                    : missedScans >= 3
+                      ? "No plate detected yet. Move closer or use Capture plate now."
+                      : "Scanning automatically. Show the next plate whenever you’re ready."
                   : lastResults
                     ? "Automatic scanning is paused. You can capture a plate or resume scanning."
                     : "Camera ready. Automatic scanning will start shortly."}
@@ -495,32 +511,6 @@ export default function DemoControls({
           </button>
         ) : (
           <>
-            {!mockAi ? (
-              <>
-                <button
-                  className="button secondary"
-                  onClick={takeManualPhoto}
-                  disabled={!cameraReady || queuedPhotos >= 5}
-                >
-                  <Camera size={17} /> Take photo manually
-                </button>
-                {queuedPhotos > 0 ? (
-                  <p role="status">
-                    {queuedPhotos} photo(s) waiting for OCR. They will be read
-                    after the current scan.
-                  </p>
-                ) : null}
-                <button
-                  className="button"
-                  onClick={capturePlateNow}
-                  disabled={pending || !cameraReady || !readiness?.ready}
-                  title="Take a photo and read its number plate with OCR"
-                >
-                  <ScanLine size={17} />
-                  Capture photo & read plate
-                </button>
-              </>
-            ) : null}
             {!autoScanEnabled && lastResults ? (
               <button
                 className="button"

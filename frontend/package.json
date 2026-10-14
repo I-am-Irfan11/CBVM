@@ -9,7 +9,8 @@
     "preview": "vite preview --host 127.0.0.1",
     "test:e2e": "playwright test",
     "format": "prettier --write src tests *.js index.html package.json",
-    "format:check": "prettier --check src tests *.js index.html package.json"
+    "format:check": "prettier --check src tests *.js index.html package.json",
+    "test:camera": "playwright test --config playwright.camera.config.js"
   },
   "dependencies": {
     "firebase": "^13.0.0",
