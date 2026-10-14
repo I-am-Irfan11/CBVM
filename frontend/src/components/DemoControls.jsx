@@ -169,7 +169,7 @@ export default function DemoControls({
 
   function describeOutcome(data) {
     if (data.outcome === "review")
-      return "Needs confirmation. Your scan is saved in the review queue; confirm the plate there to record its movement.";
+      return `${data.detection.plate || "Unreadable plate"} · Added to the review queue. You can scan another plate now and confirm queued readings later.`;
     if (data.outcome === "duplicate")
       return "Repeated detection ignored; no new movement recorded.";
     return `${data.detection.plate} · ${direction === "IN" ? "entry" : "exit"} recorded`;
@@ -181,7 +181,6 @@ export default function DemoControls({
     if (!video || !canvas || !cameraReady) return;
     if (mockAi && !vehicleId) return;
     setPending(true);
-    setLastResults(null);
     try {
       if (mockAi) {
         await frameBlob();
@@ -221,10 +220,10 @@ export default function DemoControls({
           setCapturedFrame(canvas.toDataURL("image/jpeg", 0.82));
           setLastResults(payload.results.map(describeOutcome));
           payload.results
-            .filter((item) => item.outcome !== "review")
+            .filter((item) => item.outcome === "accepted")
             .forEach((item) => notify(describeOutcome(item), false));
           refresh();
-          return true;
+          return false;
         }
       }
     } catch (error) {
@@ -239,7 +238,7 @@ export default function DemoControls({
         refresh();
       }
       const message = pendingReviews
-        ? `The scan response was interrupted. ${pendingReviews} reading${pendingReviews === 1 ? " is" : "s are"} awaiting review; check the queue before capturing again.`
+        ? `The scan response was interrupted. ${pendingReviews} reading${pendingReviews === 1 ? " is" : "s are"} awaiting review; check the queue if needed. You can capture another plate.`
         : error.status >= 500
           ? "We couldn’t confirm the scan result. Check the review queue before trying again."
           : error instanceof TypeError
@@ -260,8 +259,8 @@ export default function DemoControls({
     scanningRef.current = true;
     setAutoScanEnabled(false);
     try {
-      const recognized = await captureAndRecord({ manual: true });
-      if (!recognized) setAutoScanEnabled(true);
+      const shouldPause = await captureAndRecord({ manual: true });
+      if (!shouldPause) setAutoScanEnabled(true);
     } finally {
       scanningRef.current = false;
     }
@@ -280,11 +279,15 @@ export default function DemoControls({
     let cancelled = false;
     let timer;
     const scan = async () => {
-      if (cancelled || scanningRef.current) return;
+      if (cancelled) return;
+      if (scanningRef.current) {
+        timer = window.setTimeout(scan, 1400);
+        return;
+      }
       scanningRef.current = true;
       try {
-        const foundPlate = await captureRef.current?.();
-        if (foundPlate) setAutoScanEnabled(false);
+        const shouldPause = await captureRef.current?.();
+        if (shouldPause) setAutoScanEnabled(false);
       } finally {
         scanningRef.current = false;
         if (!cancelled && autoScanEnabled) {
@@ -315,7 +318,8 @@ export default function DemoControls({
         <h3>Capture a gate scan</h3>
         <p>
           Enable the camera and hold the plate level in view. GateLog scans
-          automatically and pauses when it finds a plate.
+          automatically. Keep scanning more plates and confirm queued readings
+          later.
         </p>
       </div>
       <div className="demo-camera">
@@ -360,9 +364,9 @@ export default function DemoControls({
                     ? vehicleId
                       ? "Demo scan will record automatically when ready."
                       : "Select a registered vehicle to start the demo scan."
-                    : "Scanning automatically. Keep the plate visible and steady."
+                    : "Scanning automatically. Show the next plate whenever you’re ready."
                   : lastResults
-                    ? "Scan complete. Start the next scan when another vehicle is ready."
+                    ? "Automatic scanning is paused. You can capture a plate or resume scanning."
                     : "Camera ready. Automatic scanning will start shortly."}
           </p>
         ) : null}
@@ -426,7 +430,7 @@ export default function DemoControls({
                 title="Send the current camera frame for plate recognition"
               >
                 <ScanLine size={17} />
-                {pending ? "Checking plate…" : "Capture plate now"}
+                Capture plate now
               </button>
             ) : null}
             {!autoScanEnabled && lastResults ? (
@@ -442,7 +446,7 @@ export default function DemoControls({
                   (!mockAi && !readiness?.ready)
                 }
               >
-                <ScanLine size={17} /> Scan next plate
+                <ScanLine size={17} /> Resume automatic scanning
               </button>
             ) : null}
             <button
