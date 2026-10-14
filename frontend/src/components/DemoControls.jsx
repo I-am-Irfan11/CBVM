@@ -18,12 +18,15 @@ export default function DemoControls({
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraPending, setCameraPending] = useState(false);
   const [pending, setPending] = useState(false);
+  const [autoScanEnabled, setAutoScanEnabled] = useState(false);
   const [cameraError, setCameraError] = useState("");
   const [capturedFrame, setCapturedFrame] = useState("");
   const [readiness, setReadiness] = useState(null);
   const [lastResults, setLastResults] = useState(null);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const scanningRef = useRef(false);
+  const captureRef = useRef(null);
 
   useEffect(() => {
     let active = true;
@@ -88,6 +91,7 @@ export default function DemoControls({
 
   async function startCamera(nextFacing = facingMode) {
     const id = ++requestId.current;
+    setAutoScanEnabled(false);
     stopCamera();
     setCameraPending(true);
     setCameraError("");
@@ -133,6 +137,7 @@ export default function DemoControls({
     stream?.getTracks().forEach((track) => track.stop());
     setStream(null);
     setCameraReady(false);
+    setAutoScanEnabled(false);
   }
 
   function frameBlob() {
@@ -150,7 +155,6 @@ export default function DemoControls({
     canvas.width = Math.round(video.videoWidth * scale);
     canvas.height = Math.round(video.videoHeight * scale);
     canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
-    setCapturedFrame(canvas.toDataURL("image/jpeg", 0.82));
     return new Promise((resolve, reject) => {
       canvas.toBlob(
         (blob) =>
@@ -187,6 +191,9 @@ export default function DemoControls({
         });
         notify(describeOutcome(data), false);
         setLastResults([describeOutcome(data)]);
+        setCapturedFrame(canvas.toDataURL("image/jpeg", 0.82));
+        refresh();
+        return true;
       } else {
         const blob = await frameBlob();
         const response = await fetch(
@@ -203,21 +210,17 @@ export default function DemoControls({
         );
         const payload = await readResponse(response);
         if (!payload.results?.length) {
-          setLastResults([
-            "No plate detected. Move closer, keep the plate level and retry.",
-          ]);
-          notify(
-            "No plate detected in this frame. Move closer and retry.",
-            false,
-          );
+          return false;
         } else {
+          setCapturedFrame(canvas.toDataURL("image/jpeg", 0.82));
           setLastResults(payload.results.map(describeOutcome));
           payload.results
             .filter((item) => item.outcome !== "review")
             .forEach((item) => notify(describeOutcome(item), false));
+          refresh();
+          return true;
         }
       }
-      refresh();
     } catch (error) {
       let pendingReviews = 0;
       if (!mockAi) {
@@ -237,10 +240,53 @@ export default function DemoControls({
             ? "Connection interrupted. Check the review queue before trying again."
             : error.message;
       setLastResults([message]);
+      refresh();
+      return true;
     } finally {
       setPending(false);
     }
   }
+
+  captureRef.current = captureAndRecord;
+
+  useEffect(() => {
+    if (
+      !stream ||
+      !cameraReady ||
+      !autoScanEnabled ||
+      (!mockAi && !readiness?.ready) ||
+      (mockAi && !vehicleId)
+    ) {
+      return undefined;
+    }
+    let cancelled = false;
+    let timer;
+    const scan = async () => {
+      if (cancelled || scanningRef.current) return;
+      scanningRef.current = true;
+      try {
+        const foundPlate = await captureRef.current?.();
+        if (foundPlate) setAutoScanEnabled(false);
+      } finally {
+        scanningRef.current = false;
+        if (!cancelled && autoScanEnabled) {
+          timer = window.setTimeout(scan, 1400);
+        }
+      }
+    };
+    timer = window.setTimeout(scan, 300);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [
+    stream,
+    cameraReady,
+    autoScanEnabled,
+    mockAi,
+    readiness?.ready,
+    vehicleId,
+  ]);
 
   return (
     <section className="demo-panel">
@@ -250,8 +296,8 @@ export default function DemoControls({
         </span>
         <h3>Capture a gate scan</h3>
         <p>
-          Hold the plate level in good light. Capture a clear frame to check its
-          reading.
+          Enable the camera and hold the plate level in view. GateLog scans
+          automatically and pauses when it finds a plate.
         </p>
       </div>
       <div className="demo-camera">
@@ -263,7 +309,11 @@ export default function DemoControls({
               muted
               playsInline
               aria-label="Live camera preview"
-              onLoadedMetadata={() => setCameraReady(true)}
+              onLoadedMetadata={() => {
+                setCameraReady(true);
+                setLastResults(null);
+                setAutoScanEnabled(true);
+              }}
             />
             {capturedFrame ? (
               <img src={capturedFrame} alt="Last captured plate image" />
@@ -279,6 +329,23 @@ export default function DemoControls({
         {cameraError ? (
           <p className="demo-camera-error" role="alert">
             {cameraError}
+          </p>
+        ) : null}
+        {stream ? (
+          <p className="scanner-status" role="status">
+            {!mockAi && !readiness?.ready
+              ? "Plate recognition is unavailable. Check the service setup before scanning."
+              : pending
+                ? "Checking the camera frame…"
+                : autoScanEnabled
+                  ? mockAi
+                    ? vehicleId
+                      ? "Demo scan will record automatically when ready."
+                      : "Select a registered vehicle to start the demo scan."
+                    : "Scanning automatically. Keep the plate visible and steady."
+                  : lastResults
+                    ? "Scan complete. Start the next scan when another vehicle is ready."
+                    : "Camera ready. Automatic scanning will start shortly."}
           </p>
         ) : null}
         <p className="demo-camera-note">
@@ -333,19 +400,22 @@ export default function DemoControls({
           </button>
         ) : (
           <>
-            <button
-              className="button"
-              onClick={captureAndRecord}
-              disabled={
-                pending ||
-                !cameraReady ||
-                (mockAi && !vehicleId) ||
-                (!mockAi && !readiness?.ready)
-              }
-            >
-              <ScanLine size={17} />
-              {pending ? "Recording…" : "Capture & record scan"}
-            </button>
+            {!autoScanEnabled && lastResults ? (
+              <button
+                className="button"
+                onClick={() => {
+                  setLastResults(null);
+                  setAutoScanEnabled(true);
+                }}
+                disabled={
+                  !cameraReady ||
+                  (mockAi && !vehicleId) ||
+                  (!mockAi && !readiness?.ready)
+                }
+              >
+                <ScanLine size={17} /> Scan next plate
+              </button>
+            ) : null}
             <button
               className="button secondary"
               onClick={() =>

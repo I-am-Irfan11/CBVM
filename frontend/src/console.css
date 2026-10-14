@@ -293,6 +293,14 @@
 .demo-controls .button {
   min-height: 44px;
 }
+.scanner-status {
+  margin: 0;
+  padding: 10px 12px;
+  color: #245368;
+  background: #edf5f7;
+  border-radius: 6px;
+  font-weight: 600;
+}
 .scan-result {
   grid-column: 1 / -1;
   padding: 18px 20px;
