@@ -2,7 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { Camera, CameraOff, ScanLine, SwitchCamera } from "lucide-react";
 import { API_URL, api, getCsrfToken, readResponse } from "../services/api";
 
-export default function DemoControls({ notify, refresh, mockAi = true }) {
+export default function DemoControls({
+  notify,
+  refresh,
+  navigate,
+  mockAi = true,
+}) {
   const [vehicles, setVehicles] = useState([]);
   const [vehicleId, setVehicleId] = useState("");
   const [direction, setDirection] = useState("IN");
@@ -214,11 +219,22 @@ export default function DemoControls({ notify, refresh, mockAi = true }) {
       }
       refresh();
     } catch (error) {
-      const message =
-        error.status >= 500
-          ? "We couldn’t finish this scan. Check Recent activity before retrying to see whether it was saved."
+      let pendingReviews = 0;
+      if (!mockAi) {
+        try {
+          const reviews = await api("/reviews?limit=25&offset=0");
+          pendingReviews = reviews.total || 0;
+        } catch {
+          // Keep the capture screen usable if the review count cannot be checked.
+        }
+        refresh();
+      }
+      const message = pendingReviews
+        ? `The scan response was interrupted. ${pendingReviews} reading${pendingReviews === 1 ? " is" : "s are"} awaiting review; check the queue before capturing again.`
+        : error.status >= 500
+          ? "We couldn’t confirm the scan result. Check the review queue before trying again."
           : error instanceof TypeError
-            ? "Connection interrupted. Check Recent activity before retrying your scan."
+            ? "Connection interrupted. Check the review queue before trying again."
             : error.message;
       setLastResults([message]);
     } finally {
@@ -362,13 +378,18 @@ export default function DemoControls({ notify, refresh, mockAi = true }) {
           <strong>
             Last capture · {mockAi ? "simulated result" : "recognition result"}
           </strong>
-          {!mockAi &&
-          lastResults.some((result) =>
-            result.startsWith("Needs confirmation"),
-          ) ? (
-            <a className="text-button" href="#reviews">
+          {!mockAi ? (
+            <button
+              className="text-button scan-review-link"
+              type="button"
+              onClick={() =>
+                navigate
+                  ? navigate("reviews")
+                  : (window.location.hash = "reviews")
+              }
+            >
               Open review queue
-            </a>
+            </button>
           ) : null}
           <ul>
             {lastResults.map((result, index) => (

@@ -604,3 +604,10 @@
     padding: 14px;
   }
 }
+
+.scan-review-link {
+  margin-top: 10px;
+  padding: 0;
+  min-height: 44px;
+  align-self: flex-start;
+}

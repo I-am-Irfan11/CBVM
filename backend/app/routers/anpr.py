@@ -3,6 +3,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from starlette.concurrency import run_in_threadpool
 from app.api.auth import operator
+from app.database.connection import public
 
 router = APIRouter(prefix="/anpr", tags=["ANPR"])
 MAX_IMAGE_BYTES = 8 * 1024 * 1024
@@ -11,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 def readiness(settings):
     import importlib.util
-    from pathlib import Path
     from app.core.config import resolve_model_path
     path = resolve_model_path(settings.yolo_model_path)
     missing = []
@@ -87,10 +87,31 @@ async def detect_image(request: Request, camera_id: str = Query(default="main-ga
         except Exception:
             raise HTTPException(503, "Scan storage is unavailable; no movement was recorded.") from None
         detections = [item.model_copy(update={"capture_key": object_key}) for item in detections]
+    def process_detections():
+        results = []
+        for detection in detections:
+            try:
+                results.append(request.app.state.processor.process(detection, camera_id))
+            except Exception:
+                # Processing can fail after a review row was persisted. Return that
+                # saved row so a transient post-save error does not hide it from the UI.
+                logger.exception("Detection processing failed; checking for a saved review")
+                saved_review = request.app.state.db.review_items.find_one({
+                    "plate": detection.plate,
+                    "camera_id": camera_id,
+                    "status": "pending",
+                })
+                if not saved_review:
+                    raise
+                results.append({
+                    "outcome": "review",
+                    "review": public(saved_review),
+                    "detection": detection.model_dump(),
+                })
+        return results
+
     try:
-        results = await run_in_threadpool(
-            lambda: [request.app.state.processor.process(item, camera_id) for item in detections]
-        )
+        results = await run_in_threadpool(process_detections)
     except HTTPException:
         raise
     except Exception:

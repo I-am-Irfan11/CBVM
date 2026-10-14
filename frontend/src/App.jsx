@@ -239,7 +239,10 @@ export default function App() {
     },
   ];
   const headings = {
-    transport: ["Bus routes & timings", "College routes, boarding points and morning departure times."],
+    transport: [
+      "Bus routes & timings",
+      "College routes, boarding points and morning departure times.",
+    ],
     scan: [
       "Scan plate",
       "Capture a plate, inspect the reading, and record its movement.",
@@ -333,6 +336,7 @@ export default function App() {
                 <DemoControls
                   notify={notify}
                   refresh={refresh}
+                  navigate={navigate}
                   mockAi={dashboard.data?.mock_ai ?? false}
                 />
               </DataState>
@@ -555,6 +559,7 @@ export default function App() {
                   <DemoControls
                     notify={notify}
                     refresh={refresh}
+                    navigate={navigate}
                     mockAi={dashboard.data.mock_ai}
                   />
                 ) : null}
@@ -563,9 +568,9 @@ export default function App() {
             {page === "reviews" ? (
               <>
                 <div className="info-note">
-                  Confirm / correct records a movement for a registered
-                  vehicle. Reject closes the review without recording a
-                  movement. Register unknown vehicles as visitors first.
+                  Confirm / correct records a movement for a registered vehicle.
+                  Reject closes the review without recording a movement.
+                  Register unknown vehicles as visitors first.
                 </div>
                 <Card>
                   <DataState state={view} retry={refresh}>
