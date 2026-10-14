@@ -96,18 +96,14 @@ async def detect_image(request: Request, camera_id: str = Query(default="main-ga
     except Exception:
         logger.exception("Failed to process plate scan results")
         raise HTTPException(500, "The scan could not be recorded. Please retry.") from None
-    # Recording has completed; a live-update failure must not report the scan as failed.
-    try:
-        for result in results:
-            if result["outcome"] == "accepted":
-                kind = "vehicle.entry" if result["log"]["status"] == "INSIDE" else "vehicle.exit"
-                await request.app.state.hub.publish(kind, result["log"])
-            elif result["outcome"] == "review":
-                await request.app.state.hub.publish("review.item", result["review"])
-        if results:
-            await request.app.state.hub.publish("camera.status", {"id": camera_id})
-    except Exception:
-        logger.exception("Scan saved but live notification failed")
+    for result in results:
+        if result["outcome"] == "accepted":
+            kind = "vehicle.entry" if result["log"]["status"] == "INSIDE" else "vehicle.exit"
+            await request.app.state.hub.publish(kind, result["log"])
+        elif result["outcome"] == "review":
+            await request.app.state.hub.publish("review.item", result["review"])
+    if results:
+        await request.app.state.hub.publish("camera.status", {"id": camera_id})
     return {"results": results, "mock_ai": False}
 
 

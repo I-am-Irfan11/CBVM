@@ -1,4 +1,4 @@
-export const API_URL = (import.meta.env?.VITE_API_URL || "/api").replace(
+export const API_URL = (import.meta.env.VITE_API_URL || "/api").replace(
   /\/$/,
   "",
 );
@@ -22,36 +22,18 @@ export async function api(path, options = {}) {
     },
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
   });
-  return readResponse(response);
-}
-
-export async function readResponse(response) {
   const responseText = await response.text();
   let data;
   try {
     data = responseText ? JSON.parse(responseText) : {};
   } catch {
-    if (response.ok)
-      throw new Error(
-        "The service returned an incomplete response. Check Recent activity before trying again.",
-      );
-    data = {};
+    data = { detail: responseText || `Request failed (${response.status})` };
   }
   if (!response.ok) {
-    const detail = Array.isArray(data?.detail)
-      ? data?.detail
-          .map((item) => `${item.loc?.at(-1) || "Request"}: ${item.msg}`)
-          .join("; ")
-      : data?.detail;
-    const message =
-      response.status >= 500
-        ? "The service is temporarily unavailable. Please try again shortly."
-        : typeof detail === "string"
-          ? detail
-          : "We couldn’t complete this request. Please try again.";
-    const error = new Error(message);
-    error.status = response.status;
-    throw error;
+    const detail = Array.isArray(data.detail)
+      ? data.detail.map((item) => `${item.loc.at(-1)}: ${item.msg}`).join("; ")
+      : data.detail;
+    throw new Error(detail || `Request failed (${response.status})`);
   }
   return data;
 }

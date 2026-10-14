@@ -232,22 +232,3 @@ def test_single_image_rejects_both_direction(app, client):
     response = client.post("/anpr/detect", content=b"unused", headers={"Content-Type": "image/jpeg"})
     assert response.status_code == 422
     assert "Single-frame" in response.json()["detail"]
-
-
-def test_saved_scan_survives_live_notification_failure(app, client, vehicle):
-    import cv2
-
-    class Recognizer:
-        def detect(self, frame):
-            return MockANPRService().detect(vehicle["number_plate"])
-
-    async def broken_publish(*args):
-        raise RuntimeError("Live notifications unavailable")
-
-    app.state.image_anpr = Recognizer()
-    app.state.hub.publish = broken_publish
-    encoded = cv2.imencode(".jpg", np.zeros((64, 100, 3), dtype=np.uint8))[1].tobytes()
-    response = client.post("/anpr/detect", content=encoded, headers={"Content-Type": "image/jpeg"})
-    assert response.status_code == 200
-    assert response.json()["results"][0]["outcome"] == "accepted"
-    assert app.state.db.vehicle_logs.count_documents({"status": "INSIDE"}) == 1

@@ -1,14 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { Camera, CameraOff, ScanLine, SwitchCamera } from "lucide-react";
-import { API_URL, api, getCsrfToken, readResponse } from "../services/api";
+import { Camera, CameraOff, ScanLine } from "lucide-react";
+import { API_URL, api, getCsrfToken } from "../services/api";
 
 export default function DemoControls({ notify, refresh, mockAi = true }) {
   const [vehicles, setVehicles] = useState([]);
   const [vehicleId, setVehicleId] = useState("");
   const [direction, setDirection] = useState("IN");
-  const [facingMode, setFacingMode] = useState("environment");
-  const mounted = useRef(true);
-  const requestId = useRef(0);
   const [stream, setStream] = useState(null);
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraPending, setCameraPending] = useState(false);
@@ -73,17 +70,7 @@ export default function DemoControls({ notify, refresh, mockAi = true }) {
     };
   }, [mockAi]);
 
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-      requestId.current += 1;
-    };
-  }, []);
-
-  async function startCamera(nextFacing = facingMode) {
-    const id = ++requestId.current;
-    stopCamera();
+  async function startCamera() {
     setCameraPending(true);
     setCameraError("");
     setCapturedFrame("");
@@ -96,23 +83,17 @@ export default function DemoControls({ notify, refresh, mockAi = true }) {
       const cameraStream = await navigator.mediaDevices.getUserMedia({
         audio: false,
         video: {
-          facingMode: { ideal: nextFacing },
+          facingMode: { ideal: "environment" },
           width: { ideal: 1280 },
           height: { ideal: 720 },
         },
       });
-      if (!mounted.current || id !== requestId.current) {
-        cameraStream.getTracks().forEach((track) => track.stop());
-        return;
-      }
-      setFacingMode(nextFacing);
       setStream(cameraStream);
     } catch (error) {
       const messages = {
         NotAllowedError:
-          "Camera access was blocked. Allow camera permission for this site in your browser settings.",
-        NotFoundError:
-          "No camera was found. Open this page on your phone or connect a webcam.",
+          "Camera access was blocked. Allow camera permission for cbvm.vercel.app in your browser.",
+        NotFoundError: "No camera was found. Connect a webcam and try again.",
         NotReadableError:
           "The camera is busy in another app. Close that app and try again.",
       };
@@ -133,17 +114,8 @@ export default function DemoControls({ notify, refresh, mockAi = true }) {
   function frameBlob() {
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    if (!video.videoWidth || !video.videoHeight) {
-      throw new Error(
-        "The camera is still getting ready. Try again in a moment.",
-      );
-    }
-    const scale = Math.min(
-      1,
-      1920 / Math.max(video.videoWidth, video.videoHeight),
-    );
-    canvas.width = Math.round(video.videoWidth * scale);
-    canvas.height = Math.round(video.videoHeight * scale);
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
     canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
     setCapturedFrame(canvas.toDataURL("image/jpeg", 0.82));
     return new Promise((resolve, reject) => {
@@ -160,7 +132,7 @@ export default function DemoControls({ notify, refresh, mockAi = true }) {
 
   function describeOutcome(data) {
     if (data.outcome === "review")
-      return "Needs confirmation. Your scan is saved in the review queue; confirm the plate there to record its movement.";
+      return `Sent to review: ${data.review.reason}`;
     if (data.outcome === "duplicate")
       return "Repeated detection ignored; no new movement recorded.";
     return `${data.detection.plate} · ${direction === "IN" ? "entry" : "exit"} recorded`;
@@ -196,31 +168,37 @@ export default function DemoControls({ notify, refresh, mockAi = true }) {
             body: blob,
           },
         );
-        const payload = await readResponse(response);
+        const responseText = await response.text();
+        let payload;
+        try {
+          payload = responseText ? JSON.parse(responseText) : {};
+        } catch {
+          payload = {
+            detail: responseText || `Recognition failed (${response.status})`,
+          };
+        }
+        if (!response.ok)
+          throw new Error(
+            payload.detail || `Recognition failed (${response.status})`,
+          );
         if (!payload.results?.length) {
           setLastResults([
             "No plate detected. Move closer, keep the plate level and retry.",
           ]);
           notify(
             "No plate detected in this frame. Move closer and retry.",
-            false,
+            true,
           );
         } else {
           setLastResults(payload.results.map(describeOutcome));
-          payload.results
-            .filter((item) => item.outcome !== "review")
-            .forEach((item) => notify(describeOutcome(item), false));
+          payload.results.forEach((item) =>
+            notify(describeOutcome(item), item.outcome === "review"),
+          );
         }
       }
       refresh();
     } catch (error) {
-      const message =
-        error.status >= 500
-          ? "We couldn’t finish this scan. Check Recent activity before retrying to see whether it was saved."
-          : error instanceof TypeError
-            ? "Connection interrupted. Check Recent activity before retrying your scan."
-            : error.message;
-      setLastResults([message]);
+      notify(error.message, true);
     } finally {
       setPending(false);
     }
@@ -246,17 +224,20 @@ export default function DemoControls({ notify, refresh, mockAi = true }) {
               autoPlay
               muted
               playsInline
-              aria-label="Live camera preview"
+              aria-label="Live laptop camera preview"
               onLoadedMetadata={() => setCameraReady(true)}
             />
             {capturedFrame ? (
-              <img src={capturedFrame} alt="Last captured plate image" />
+              <img
+                src={capturedFrame}
+                alt="Captured camera frame for this demo scan"
+              />
             ) : null}
           </div>
         ) : (
           <div className="demo-camera-placeholder">
             <Camera size={25} />
-            <span>Use your phone camera or computer webcam.</span>
+            <span>Your camera preview will appear here.</span>
           </div>
         )}
         <canvas ref={canvasRef} className="sr-only" aria-hidden="true" />
@@ -268,12 +249,18 @@ export default function DemoControls({ notify, refresh, mockAi = true }) {
         <p className="demo-camera-note">
           {mockAi
             ? "The captured image stays in this browser and isn’t saved. The plate match is simulated from your vehicle registry; this demo does not perform OCR."
-            : "Keep the full plate visible and steady. If a reading needs confirmation, you can complete it in the review queue."}
+            : "The frame is sent to real YOLO plate detection plus OCR. Low-confidence or unknown plates land in the review queue."}
         </p>
         {!mockAi && readiness && !readiness.ready ? (
-          <p className="recognition-status" role="status">
-            Plate scanning is temporarily unavailable. Please try again shortly.
-          </p>
+          <details className="recognition-status">
+            <summary>Plate recognition is unavailable · view details</summary>
+            <p>The backend is missing these recognition components:</p>
+            <ul>
+              {(readiness.dependencies || []).map((dependency) => (
+                <li key={dependency}>{dependency}</li>
+              ))}
+            </ul>
+          </details>
         ) : null}
       </div>
       <div className="demo-controls">
@@ -300,7 +287,6 @@ export default function DemoControls({ notify, refresh, mockAi = true }) {
         <select
           id="mock-direction"
           value={direction}
-          disabled={pending}
           onChange={(event) => setDirection(event.target.value)}
         >
           <option value="IN">Entry</option>
@@ -309,11 +295,11 @@ export default function DemoControls({ notify, refresh, mockAi = true }) {
         {!stream ? (
           <button
             className="button"
-            onClick={() => startCamera()}
+            onClick={startCamera}
             disabled={cameraPending}
           >
             <Camera size={17} />
-            {cameraPending ? "Starting camera…" : "Enable camera"}
+            {cameraPending ? "Starting camera…" : "Enable laptop camera"}
           </button>
         ) : (
           <>
@@ -329,17 +315,6 @@ export default function DemoControls({ notify, refresh, mockAi = true }) {
             >
               <ScanLine size={17} />
               {pending ? "Recording…" : "Capture & record scan"}
-            </button>
-            <button
-              className="button secondary"
-              onClick={() =>
-                startCamera(
-                  facingMode === "environment" ? "user" : "environment",
-                )
-              }
-              disabled={pending || cameraPending}
-            >
-              <SwitchCamera size={17} /> Switch camera
             </button>
             <button
               className="button secondary"
@@ -362,14 +337,6 @@ export default function DemoControls({ notify, refresh, mockAi = true }) {
           <strong>
             Last capture · {mockAi ? "simulated result" : "recognition result"}
           </strong>
-          {!mockAi &&
-          lastResults.some((result) =>
-            result.startsWith("Needs confirmation"),
-          ) ? (
-            <a className="text-button" href="#reviews">
-              Open review queue
-            </a>
-          ) : null}
           <ul>
             {lastResults.map((result, index) => (
               <li key={index}>{result}</li>
