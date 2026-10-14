@@ -559,3 +559,48 @@
     gap: 2px;
   }
 }
+
+/* Capture controls stay readable and reachable on narrow phone screens. */
+.demo-camera,
+.demo-controls,
+.scan-result {
+  min-width: 0;
+}
+.scan-result {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 600px) {
+  .demo-panel {
+    gap: 16px;
+    padding: 16px;
+  }
+  .demo-controls {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .demo-controls select {
+    width: 100%;
+    min-height: 48px;
+    font-size: 16px;
+  }
+  .demo-controls .button {
+    min-height: 48px;
+    white-space: normal;
+  }
+  .demo-camera-placeholder {
+    min-height: 180px;
+    padding: 20px;
+    text-align: center;
+  }
+  .demo-camera-preview video {
+    aspect-ratio: 4 / 3;
+    max-height: 45vh;
+  }
+  .demo-camera-preview img {
+    max-height: 140px;
+  }
+  .scan-result {
+    padding: 14px;
+  }
+}
