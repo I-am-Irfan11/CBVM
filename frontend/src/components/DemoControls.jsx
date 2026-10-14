@@ -175,7 +175,7 @@ export default function DemoControls({
     return `${data.detection.plate} · ${direction === "IN" ? "entry" : "exit"} recorded`;
   }
 
-  async function captureAndRecord() {
+  async function captureAndRecord({ manual = false } = {}) {
     const video = videoRef.current;
     const canvas = canvasRef.current;
     if (!video || !canvas || !cameraReady) return;
@@ -210,6 +210,12 @@ export default function DemoControls({
         );
         const payload = await readResponse(response);
         if (!payload.results?.length) {
+          if (manual) {
+            setCapturedFrame(canvas.toDataURL("image/jpeg", 0.82));
+            setLastResults([
+              "No plate was recognized in this frame. Move closer, improve the light, keep the plate level, then capture again.",
+            ]);
+          }
           return false;
         } else {
           setCapturedFrame(canvas.toDataURL("image/jpeg", 0.82));
@@ -248,6 +254,18 @@ export default function DemoControls({
   }
 
   captureRef.current = captureAndRecord;
+
+  async function capturePlateNow() {
+    if (scanningRef.current || pending || !cameraReady || mockAi) return;
+    scanningRef.current = true;
+    setAutoScanEnabled(false);
+    try {
+      const recognized = await captureAndRecord({ manual: true });
+      if (!recognized) setAutoScanEnabled(true);
+    } finally {
+      scanningRef.current = false;
+    }
+  }
 
   useEffect(() => {
     if (
@@ -400,6 +418,17 @@ export default function DemoControls({
           </button>
         ) : (
           <>
+            {!mockAi ? (
+              <button
+                className="button"
+                onClick={capturePlateNow}
+                disabled={pending || !cameraReady || !readiness?.ready}
+                title="Send the current camera frame for plate recognition"
+              >
+                <ScanLine size={17} />
+                {pending ? "Checking plate…" : "Capture plate now"}
+              </button>
+            ) : null}
             {!autoScanEnabled && lastResults ? (
               <button
                 className="button"
