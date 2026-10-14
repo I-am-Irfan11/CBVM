@@ -28,7 +28,9 @@ class DetectionProcessor:
         )
         vehicle = db.vehicles.find_one({"number_plate": detection.plate})
         reason = None
-        if not detection.valid or detection.confidence < self.ops.settings.ocr_confidence_threshold:
+        if detection.requires_review:
+            reason = "Photo OCR requires confirmation"
+        elif not detection.valid or detection.confidence < self.ops.settings.ocr_confidence_threshold:
             reason = "Low confidence or unsupported plate format"
         elif not vehicle:
             reason = "Unregistered vehicle"

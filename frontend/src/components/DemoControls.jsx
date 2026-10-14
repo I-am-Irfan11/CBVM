@@ -195,8 +195,12 @@ export default function DemoControls({
         return true;
       } else {
         const blob = await frameBlob();
+        if (manual) {
+          setCapturedFrame(canvas.toDataURL("image/jpeg", 0.82));
+          setLastResults(["Photo captured. Reading the plate with OCR…"]);
+        }
         const response = await fetch(
-          `${API_URL}/anpr/detect?camera_id=main-gate-${direction.toLowerCase()}`,
+          `${API_URL}/anpr/detect?camera_id=main-gate-${direction.toLowerCase()}&manual_capture=${manual}`,
           {
             method: "POST",
             credentials: "include",
@@ -427,10 +431,10 @@ export default function DemoControls({
                 className="button"
                 onClick={capturePlateNow}
                 disabled={pending || !cameraReady || !readiness?.ready}
-                title="Send the current camera frame for plate recognition"
+                title="Take a photo and read its number plate with OCR"
               >
                 <ScanLine size={17} />
-                Capture plate now
+                Capture photo & read plate
               </button>
             ) : null}
             {!autoScanEnabled && lastResults ? (

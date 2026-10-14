@@ -25,6 +25,7 @@ class Detection(BaseModel):
     camera_id: str | None = None
     direction: Literal["IN", "OUT"] | None = None
     capture_key: str | None = None
+    requires_review: bool = False
 
 
 class ANPRService(ABC):
@@ -234,6 +235,25 @@ class RealANPRService(ANPRService):
                     )
                 )
         return rows
+
+    def read_photo(self, frame):
+        """Read a manually captured photo when the detector finds no plate region."""
+        started = perf_counter()
+        raw, confidence = self.ocr.read(frame)
+        plate = normalize_plate(raw)
+        if not plate:
+            return []
+        height, width = frame.shape[:2]
+        return [Detection(
+            plate=plate,
+            raw_text=raw,
+            confidence=max(0.0, min(1.0, confidence)),
+            bounding_box=(0, 0, width, height),
+            valid=valid_plate(plate),
+            requires_review=True,
+            processing_time=(perf_counter() - started) * 1000,
+            timestamp=datetime.now(timezone.utc),
+        )]
 
     def _read_character_boxes(self, result, width, height, started):
         """Decode the Roboflow character-box dataset by reading boxes in plate order."""

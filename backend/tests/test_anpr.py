@@ -251,3 +251,42 @@ def test_saved_scan_survives_live_notification_failure(app, client, vehicle):
     assert response.status_code == 200
     assert response.json()["results"][0]["outcome"] == "accepted"
     assert app.state.db.vehicle_logs.count_documents({"status": "INSIDE"}) == 1
+
+
+def test_manual_photo_ocr_preserves_text_and_requires_review():
+    class PhotoOCR(OCRService):
+        def read(self, image):
+            return "MH 14 DS 7000", 0.99
+
+    service = RealANPRService(Settings(_env_file=None), ocr=PhotoOCR())
+    result = service.read_photo(np.zeros((64, 100, 3), dtype=np.uint8))[0]
+    assert result.plate == "MH14DS7000"
+    assert result.raw_text == "MH 14 DS 7000"
+    assert result.valid and result.requires_review
+
+
+def test_manual_capture_uses_photo_ocr_only_when_detector_misses(app, client, vehicle):
+    import cv2
+
+    class MissedPlate:
+        calls = 0
+
+        def detect(self, frame):
+            return []
+
+        def read_photo(self, frame):
+            self.calls += 1
+            return [MockANPRService().detect(vehicle["number_plate"])[0].model_copy(
+                update={"requires_review": True})]
+
+    recognizer = MissedPlate()
+    app.state.image_anpr = recognizer
+    encoded = cv2.imencode(".jpg", np.zeros((64, 100, 3), dtype=np.uint8))[1].tobytes()
+    headers = {"Content-Type": "image/jpeg"}
+    assert client.post("/anpr/detect", content=encoded, headers=headers).json()["results"] == []
+    assert recognizer.calls == 0
+    result = client.post("/anpr/detect?manual_capture=true", content=encoded, headers=headers)
+    assert result.status_code == 200
+    assert result.json()["results"][0]["outcome"] == "review"
+    assert recognizer.calls == 1
+    assert app.state.db.vehicle_logs.count_documents({}) == 0

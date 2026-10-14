@@ -40,6 +40,7 @@ def status(request: Request, user=Depends(operator)):
 
 @router.post("/detect")
 async def detect_image(request: Request, camera_id: str = Query(default="main-gate-in", max_length=80),
+                       manual_capture: bool = Query(default=False),
                        user=Depends(operator)):
     """Send raw JPEG/PNG bytes. Recognize, review or record using the camera direction."""
     if request.headers.get("content-type", "").split(";")[0] not in ("image/jpeg", "image/png"):
@@ -68,6 +69,8 @@ async def detect_image(request: Request, camera_id: str = Query(default="main-ga
             from app.services.operations import utcnow
             request.app.state.db.cameras.update_one({"_id": camera_id}, {"$set": {"health_status": "online", "last_frame_time": utcnow()}})
             detections = request.app.state.image_anpr.detect(frame)
+            if manual_capture and not detections:
+                detections = request.app.state.image_anpr.read_photo(frame)
         except (ImportError, RuntimeError, OSError):
             raise HTTPException(
                 503, "Real ANPR is not ready. " + readiness(request.app.state.settings)["message"]
