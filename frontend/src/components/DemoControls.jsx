@@ -27,6 +27,9 @@ export default function DemoControls({
   const canvasRef = useRef(null);
   const scanningRef = useRef(false);
   const captureRef = useRef(null);
+  const photoQueue = useRef([]);
+  const drainRef = useRef(null);
+  const [queuedPhotos, setQueuedPhotos] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -85,6 +88,7 @@ export default function DemoControls({
     mounted.current = true;
     return () => {
       mounted.current = false;
+      photoQueue.current = [];
       requestId.current += 1;
     };
   }, []);
@@ -134,6 +138,8 @@ export default function DemoControls({
   }
 
   function stopCamera() {
+    photoQueue.current = [];
+    setQueuedPhotos(0);
     stream?.getTracks().forEach((track) => track.stop());
     setStream(null);
     setCameraReady(false);
@@ -167,15 +173,19 @@ export default function DemoControls({
     });
   }
 
-  function describeOutcome(data) {
+  function describeOutcome(data, movementDirection = direction) {
     if (data.outcome === "review")
       return `${data.detection.plate || "Unreadable plate"} · Added to the review queue. You can scan another plate now and confirm queued readings later.`;
     if (data.outcome === "duplicate")
       return "Repeated detection ignored; no new movement recorded.";
-    return `${data.detection.plate} · ${direction === "IN" ? "entry" : "exit"} recorded`;
+    return `${data.detection.plate} · ${movementDirection === "IN" ? "entry" : "exit"} recorded`;
   }
 
-  async function captureAndRecord({ manual = false } = {}) {
+  async function captureAndRecord({
+    manual = false,
+    photo = null,
+    captureDirection = direction,
+  } = {}) {
     const video = videoRef.current;
     const canvas = canvasRef.current;
     if (!video || !canvas || !cameraReady) return;
@@ -194,13 +204,18 @@ export default function DemoControls({
         refresh();
         return true;
       } else {
-        const blob = await frameBlob();
+        const blob = photo ? await photo.blob : await frameBlob();
+        if (!blob)
+          throw new Error(
+            "Could not capture this photo. Please take it again.",
+          );
+        const preview = photo?.preview || canvas.toDataURL("image/jpeg", 0.82);
         if (manual) {
-          setCapturedFrame(canvas.toDataURL("image/jpeg", 0.82));
+          setCapturedFrame(preview);
           setLastResults(["Photo captured. Reading the plate with OCR…"]);
         }
         const response = await fetch(
-          `${API_URL}/anpr/detect?camera_id=main-gate-${direction.toLowerCase()}&manual_capture=${manual}`,
+          `${API_URL}/anpr/detect?camera_id=main-gate-${captureDirection.toLowerCase()}&manual_capture=${manual}`,
           {
             method: "POST",
             credentials: "include",
@@ -214,18 +229,24 @@ export default function DemoControls({
         const payload = await readResponse(response);
         if (!payload.results?.length) {
           if (manual) {
-            setCapturedFrame(canvas.toDataURL("image/jpeg", 0.82));
+            setCapturedFrame(preview);
             setLastResults([
               "No plate was recognized in this frame. Move closer, improve the light, keep the plate level, then capture again.",
             ]);
           }
           return false;
         } else {
-          setCapturedFrame(canvas.toDataURL("image/jpeg", 0.82));
-          setLastResults(payload.results.map(describeOutcome));
+          setCapturedFrame(preview);
+          setLastResults(
+            payload.results.map((item) =>
+              describeOutcome(item, captureDirection),
+            ),
+          );
           payload.results
             .filter((item) => item.outcome === "accepted")
-            .forEach((item) => notify(describeOutcome(item), false));
+            .forEach((item) =>
+              notify(describeOutcome(item, captureDirection), false),
+            );
           refresh();
           return false;
         }
@@ -267,7 +288,54 @@ export default function DemoControls({
       if (!shouldPause) setAutoScanEnabled(true);
     } finally {
       scanningRef.current = false;
+      void drainRef.current?.();
     }
+  }
+
+  async function drainPhotoQueue() {
+    if (scanningRef.current || !mounted.current || !photoQueue.current.length)
+      return;
+    scanningRef.current = true;
+    try {
+      while (mounted.current && photoQueue.current.length) {
+        const photo = photoQueue.current.shift();
+        setQueuedPhotos(photoQueue.current.length);
+        const shouldPause = await captureRef.current({
+          manual: true,
+          photo,
+          captureDirection: photo.direction,
+        });
+        if (shouldPause) {
+          setAutoScanEnabled(false);
+        }
+      }
+    } finally {
+      scanningRef.current = false;
+    }
+  }
+  drainRef.current = drainPhotoQueue;
+
+  function takeManualPhoto() {
+    if (!cameraReady || photoQueue.current.length >= 5) return;
+    const video = videoRef.current;
+    if (!video?.videoWidth || !video.videoHeight) return;
+    // Each shutter press owns its canvas; later frames cannot replace this photo.
+    const canvas = document.createElement("canvas");
+    const scale = Math.min(
+      1,
+      1920 / Math.max(video.videoWidth, video.videoHeight),
+    );
+    canvas.width = Math.round(video.videoWidth * scale);
+    canvas.height = Math.round(video.videoHeight * scale);
+    canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+    const preview = canvas.toDataURL("image/jpeg", 0.82);
+    const blob = new Promise((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", 0.9),
+    );
+    photoQueue.current.push({ blob, preview, direction });
+    setCapturedFrame(preview);
+    setQueuedPhotos(photoQueue.current.length);
+    void drainRef.current();
   }
 
   useEffect(() => {
@@ -294,6 +362,7 @@ export default function DemoControls({
         if (shouldPause) setAutoScanEnabled(false);
       } finally {
         scanningRef.current = false;
+        void drainRef.current?.();
         if (!cancelled && autoScanEnabled) {
           timer = window.setTimeout(scan, 1400);
         }
@@ -427,15 +496,30 @@ export default function DemoControls({
         ) : (
           <>
             {!mockAi ? (
-              <button
-                className="button"
-                onClick={capturePlateNow}
-                disabled={pending || !cameraReady || !readiness?.ready}
-                title="Take a photo and read its number plate with OCR"
-              >
-                <ScanLine size={17} />
-                Capture photo & read plate
-              </button>
+              <>
+                <button
+                  className="button secondary"
+                  onClick={takeManualPhoto}
+                  disabled={!cameraReady || queuedPhotos >= 5}
+                >
+                  <Camera size={17} /> Take photo manually
+                </button>
+                {queuedPhotos > 0 ? (
+                  <p role="status">
+                    {queuedPhotos} photo(s) waiting for OCR. They will be read
+                    after the current scan.
+                  </p>
+                ) : null}
+                <button
+                  className="button"
+                  onClick={capturePlateNow}
+                  disabled={pending || !cameraReady || !readiness?.ready}
+                  title="Take a photo and read its number plate with OCR"
+                >
+                  <ScanLine size={17} />
+                  Capture photo & read plate
+                </button>
+              </>
             ) : null}
             {!autoScanEnabled && lastResults ? (
               <button
